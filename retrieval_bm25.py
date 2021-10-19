@@ -260,12 +260,15 @@ class SparseRetrieval:
             p_embedding = self.p_embedding.tocsc()
             k1, b = 1.6, 0.75
             len_p = np.zeros(len(self.contexts))
+            for idx, context in enumerate(self.contexts):
+                len_p[idx] = len(context)
+
             avdl = np.mean(len_p)
             p_emb_for_q = p_embedding[:, query_vec.indices]
             denom = p_emb_for_q + (k1 * (1 - b + b * len_p / avdl))[:, None]
 
             #idf = self.idf[None, query_vec.indices] - 1.0
-            idf = self.tfidfv[None, query_vec.indices] - 1.0
+            idf = self.idf[None, query_vec.indices] - 1.0
             numer = p_emb_for_q.multiply(np.broadcast_to(idf, p_emb_for_q.shape)) * (k1 + 1)
             result = (numer / denom).sum(1).A1
 
@@ -324,6 +327,10 @@ class SparseRetrieval:
 
             k1, b = 1.6, 0.75
             len_p = np.zeros(len(self.contexts))
+
+            for idx, context in enumerate(self.contexts):
+                len_p[idx] = len(context)
+
             avdl = np.mean(len_p)
             p_emb_for_q = p_embedding[:, query_vec.indices]
             denom = p_emb_for_q + (k1 * (1 - b + b * len_p / avdl))[:, None]
@@ -482,19 +489,19 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
-        "--dataset_name", metavar="./data/train_dataset", type=str, help=""
+        "--dataset_name", default="../data/train_dataset/", type=str, help=""
     )
     parser.add_argument(
         "--model_name_or_path",
-        metavar="bert-base-multilingual-cased",
+        default="bert-base-multilingual-cased",
         type=str,
         help="",
     )
-    parser.add_argument("--data_path", metavar="./data", type=str, help="")
+    parser.add_argument("--data_path", default="../data", type=str, help="")
     parser.add_argument(
-        "--context_path", metavar="wikipedia_documents", type=str, help=""
+        "--context_path", default="wikipedia_documents.json", type=str, help=""
     )
-    parser.add_argument("--use_faiss", metavar=False, type=bool, help="")
+    parser.add_argument("--use_faiss", default=False, type=bool, help="")
 
     args = parser.parse_args()
 
@@ -539,6 +546,7 @@ if __name__ == "__main__":
 
     else:
         with timer("bulk query by exhaustive search"):
+            retriever.get_sparse_embedding()
             df = retriever.retrieve(full_ds)
             df["correct"] = df["original_context"] == df["context"]
             print(
@@ -548,3 +556,19 @@ if __name__ == "__main__":
 
         with timer("single query by exhaustive search"):
             scores, indices = retriever.retrieve(query)
+
+    def topk_experiment(topK_list):
+        result_dict = {}
+        retriever.get_sparse_embedding()
+        for topK in tqdm(topK_list):
+            result_retriever = retriever.retrieve(full_ds,topk = topK)
+            correct = 0
+            for index in range(len(result_retriever)):
+                if  result_retriever['original_context'][index] in result_retriever['context'][index]:
+                    correct += 1
+            result_dict[topK] = correct/len(result_retriever)
+        return result_dict
+
+    topK_list = [1,10,20,50]
+    result = topk_experiment(topK_list)
+    print(result)
