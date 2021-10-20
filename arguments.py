@@ -90,3 +90,9 @@ class DataTrainingArguments:
     use_faiss: bool = field(
         default=False, metadata={"help": "Whether to build with faiss"}
     )
+    k1 : int = field(
+        default=1.6, metadata={"help": "Define k1 for BM25."}
+    )
+    b : int = field(
+        default=0.75, metadata={"help": "Define b for BM25."}
+    )
