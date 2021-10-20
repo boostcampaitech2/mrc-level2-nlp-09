@@ -19,6 +19,7 @@ from datasets import (
     concatenate_datasets,
 )
 from scipy import sparse
+from retrieval_check import topk_experiment
 
 @contextmanager
 def timer(name):
@@ -85,6 +86,8 @@ class SparseRetrieval:
         self.p_embedding = None  # get_sparse_embedding()로 생성합니다
         self.indexer = None  # build_faiss()로 생성합니다.
         self.idf = None
+        self.k1 = None
+        self.b = None
 
     def get_sparse_embedding(self) -> NoReturn:
 
@@ -174,7 +177,7 @@ class SparseRetrieval:
             print("Faiss Indexer Saved.")
 
     def retrieve(
-        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1
+        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1, k1 = 1.6, b = 0.75
     ) -> Union[Tuple[List, List], pd.DataFrame]:
 
         """
@@ -198,6 +201,9 @@ class SparseRetrieval:
         """
 
         assert self.p_embedding is not None, "get_sparse_embedding() 메소드를 먼저 수행해줘야합니다."
+
+        self.k1 = k1
+        self.b = b
 
         if isinstance(query_or_dataset, str):
             doc_scores, doc_indices = self.get_relevant_doc(query_or_dataset, k=topk)
@@ -258,7 +264,8 @@ class SparseRetrieval:
 
         with timer("query ex search"):
             p_embedding = self.p_embedding.tocsc()
-            k1, b = 1.6, 0.75
+            k1 = self.k1
+            b = self.b
             len_p = np.zeros(len(self.contexts))
             for idx, context in enumerate(self.contexts):
                 len_p[idx] = len(context)
@@ -325,7 +332,8 @@ class SparseRetrieval:
 
         for query_vec in tqdm(query_vecs):
 
-            k1, b = 1.6, 0.75
+            k1 = self.k1
+            b = self.b
             len_p = np.zeros(len(self.contexts))
 
             for idx, context in enumerate(self.contexts):
@@ -502,6 +510,7 @@ if __name__ == "__main__":
         "--context_path", default="wikipedia_documents.json", type=str, help=""
     )
     parser.add_argument("--use_faiss", default=False, type=bool, help="")
+    #parser.add_argument()
 
     args = parser.parse_args()
 
@@ -528,22 +537,7 @@ if __name__ == "__main__":
         data_path=args.data_path,
         context_path=args.context_path,
     )
-
-    query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
-
-    if args.use_faiss:
-
-        # test single query
-        with timer("single query by faiss"):
-            scores, indices = retriever.retrieve_faiss(query)
-
-        # test bulk
-        with timer("bulk query by exhaustive search"):
-            df = retriever.retrieve_faiss(full_ds)
-            df["correct"] = df["original_context"] == df["context"]
-
-            print("correct retrieval result by faiss", df["correct"].sum() / len(df))
-
+    """
     else:
         with timer("bulk query by exhaustive search"):
             retriever.get_sparse_embedding()
@@ -556,19 +550,15 @@ if __name__ == "__main__":
 
         with timer("single query by exhaustive search"):
             scores, indices = retriever.retrieve(query)
-
-    def topk_experiment(topK_list):
-        result_dict = {}
-        retriever.get_sparse_embedding()
-        for topK in tqdm(topK_list):
-            result_retriever = retriever.retrieve(full_ds,topk = topK)
-            correct = 0
-            for index in range(len(result_retriever)):
-                if  result_retriever['original_context'][index] in result_retriever['context'][index]:
-                    correct += 1
-            result_dict[topK] = correct/len(result_retriever)
-        return result_dict
+    """
+    
+    retriever.get_sparse_embedding()
 
     topK_list = [1,10,20,50]
-    result = topk_experiment(topK_list)
-    print(result)
+    result_dict = {}
+    
+    for topK in tqdm(topK_list):
+        result_retriever = retriever.retrieve(full_ds, topk=topK)
+        result = topk_experiment(result_retriever)
+        result_dict[topK]=result
+    print(result_dict)

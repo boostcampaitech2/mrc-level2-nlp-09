@@ -81,6 +81,11 @@ def main():
         if model_args.config_name
         else model_args.model_name_or_path,
     )
+    retrieval_tokenizer = AutoTokenizer.from_pretrained(
+        #args.model_name_or_path,
+        "bert-base-multilingual-cased",
+        use_fast=False,
+    )
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name
         if model_args.tokenizer_name
@@ -96,7 +101,7 @@ def main():
     # True일 경우 : run passage retrieval
     if data_args.eval_retrieval:
         datasets = run_sparse_retrieval(
-            tokenizer.tokenize,
+            retrieval_tokenizer.tokenize,
             datasets,
             training_args,
             data_args,
@@ -128,7 +133,7 @@ def run_sparse_retrieval(
             datasets["validation"], topk=data_args.top_k_retrieval
         )
     else:
-        df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+        df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval, k1= , b=)
 
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if training_args.do_predict:
