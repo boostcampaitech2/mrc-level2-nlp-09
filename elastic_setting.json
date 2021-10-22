@@ -1,0 +1,31 @@
+ {
+    "settings" : {
+      "index":{
+        "analysis":{
+          "analyzer":{
+            "korean":{
+              "type":"custom",
+              "tokenizer":"nori_tokenizer",
+              "filter": [ "shingle" ]
+            }
+          }
+        }
+      }
+    },
+    "mappings": {
+  
+        "properties" : {
+          "content" : {
+            "type" : "text",
+            "analyzer": "korean",
+            "search_analyzer": "korean"
+          },
+          "title" : {
+            "type" : "text",
+            "analyzer": "korean",
+            "search_analyzer": "korean"
+          }
+        }
+  
+    }
+  }
