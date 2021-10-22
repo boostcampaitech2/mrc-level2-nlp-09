@@ -18,7 +18,7 @@ from datasets import (
     load_from_disk,
     concatenate_datasets,
 )
-from scipy import sparse
+
 
 @contextmanager
 def timer(name):
@@ -26,62 +26,6 @@ def timer(name):
     yield
     print(f"[{name}] done in {time.time() - t0:.3f} s")
 
-class BM25(object):
-    def __init__(self, b=0.75, k1=1.6, tokenizer=tokenize_fn):
-        self.vectorizer = TfidfVectorizer(
-            norm=None, 
-            smooth_idf=False, 
-            ngram_range=(1, 2),
-            max_features=50000,)
-        self.b = b
-        self.k1 = k1
-        self.tokenizer = tokenizer
-        
-
-    def fit(self, X):
-        """ Fit IDF to documents X """
-        self.vectorizer.fit(X)
-        y = super(TfidfVectorizer, self.vectorizer).transform(X)
-        self.avdl = y.sum(1).mean()
-
-    def transform(self, q, X):
-        """ Calculate BM25 between query q and documents X """
-        b, k1, avdl = self.b, self.k1, self.avdl
-
-        # apply CountVectorizer
-        X = super(TfidfVectorizer, self.vectorizer).transform(X)
-        len_X = X.sum(1).A1
-        q, = super(TfidfVectorizer, self.vectorizer).transform([q])
-        assert sparse.isspmatrix_csr(q)
-
-        # convert to csc for better column slicing
-        X = X.tocsc()[:, q.indices]
-        denom = X + (k1 * (1 - b + b * len_X / avdl))[:, None]
-        # idf(t) = log [ n / df(t) ] + 1 in sklearn, so it need to be coneverted
-        # to idf(t) = log [ n / df(t) ] with minus 1
-        idf = self.vectorizer._tfidf.idf_[None, q.indices] - 1.
-        numer = X.multiply(np.broadcast_to(idf, X.shape)) * (k1 + 1)                                                          
-        return (numer / denom).sum(1).A1
-        
-    def calculate_score(self, p_embedding, query_vec):
-        b, k1, avdl = self.b, self.k1, self.avdl
-        len_p = self.dls
-
-        p_emb_for_q = p_embedding[:, query_vec.indices]
-        denom = p_emb_for_q + (k1 * (1 - b + b * len_p / avdl))[:, None]
-
-        # idf(t) = log [ n / df(t) ] + 1 in sklearn, so it need to be converted
-        # to idf(t) = log [ n / df(t) ] with minus 1
-        idf = self.idf[None, query_vec.indices] - 1.0
-
-        numer = p_emb_for_q.multiply(np.broadcast_to(idf, p_emb_for_q.shape)) * (k1 + 1)
-
-        result = (numer / denom).sum(1).A1
-
-        if not isinstance(result, np.ndarray):
-            result = result.toarray()
-
-        return result
 
 class SparseRetrieval:
     def __init__(
@@ -99,15 +43,11 @@ class SparseRetrieval:
                 - lambda x: x.split(' ')
                 - Huggingface Tokenizer
                 - konlpy.tag의 Mecab
-
             data_path:
                 데이터가 보관되어 있는 경로입니다.
-
             context_path:
                 Passage들이 묶여있는 파일명입니다.
-
             data_path/context_path가 존재해야합니다.
-
         Summary:
             Passage 파일을 불러오고 TfidfVectorizer를 선언하는 기능을 합니다.
         """
@@ -122,7 +62,7 @@ class SparseRetrieval:
         print(f"Lengths of unique contexts : {len(self.contexts)}")
         self.ids = list(range(len(self.contexts)))
 
-        # Transform by vectorizerhttps://cypision.github.io/deep-learning/Text_Analysis_01_classification/
+        # Transform by vectorizer
         self.tfidfv = TfidfVectorizer(
             tokenizer=tokenize_fn,
             ngram_range=(1, 2),
@@ -170,7 +110,6 @@ class SparseRetrieval:
             속성으로 저장되어 있는 Passage Embedding을
             Faiss indexer에 fitting 시켜놓습니다.
             이렇게 저장된 indexer는 `get_relevant_doc`에서 유사도를 계산하는데 사용됩니다.
-
         Note:
             Faiss는 Build하는데 시간이 오래 걸리기 때문에,
             매번 새롭게 build하는 것은 비효율적입니다.
@@ -213,11 +152,9 @@ class SparseRetrieval:
                 이 경우 `get_relevant_doc_bulk`를 통해 유사도를 구합니다.
             topk (Optional[int], optional): Defaults to 1.
                 상위 몇 개의 passage를 사용할 것인지 지정합니다.
-
         Returns:
             1개의 Query를 받는 경우  -> Tuple(List, List)
             다수의 Query를 받는 경우 -> pd.DataFrame: [description]
-
         Note:
             다수의 Query를 받는 경우,
                 Ground Truth가 있는 Query (train/valid) -> 기존 Ground Truth Passage를 같이 반환합니다.
@@ -283,16 +220,9 @@ class SparseRetrieval:
         assert (
             np.sum(query_vec) != 0
         ), "오류가 발생했습니다. 이 오류는 보통 query에 vectorizer의 vocab에 없는 단어만 존재하는 경우 발생합니다."
+
         with timer("query ex search"):
-            X = self.p_embedding.T #아니면 self
-            len_X = X.sum(1).A1
-            avdl = self.p_embedding.sum(1).mean()
-            k1, b = 1.6, 0.75
-            denom = X + (k1 * (1 - b + b * len_X / avdl))[:, None]
-            idf = self.tfidfv._tfidf.idf_[None, query_vec.indices] - 1.
-            numer = X.multiply(np.broadcast_to(idf, X.shape)) * (k1 + 1)
-            #result = query_vec * self.p_embedding.T #self.p_embedding.T = TFIDF(term,D) 
-            result = (numer / denom).sum(1).A1
+            result = query_vec * self.p_embedding.T
         if not isinstance(result, np.ndarray):
             result = result.toarray()
 
@@ -300,18 +230,6 @@ class SparseRetrieval:
         doc_score = result.squeeze()[sorted_result].tolist()[:k]
         doc_indices = sorted_result.tolist()[:k]
         return doc_score, doc_indices
-
-        '''
-        with timer("query ex search"):
-            result = query_vec * self.p_embedding.T #self.p_embedding.T = TFIDF(term,D) 
-        if not isinstance(result, np.ndarray):
-            result = result.toarray()
-
-        sorted_result = np.argsort(result.squeeze())[::-1]
-        doc_score = result.squeeze()[sorted_result].tolist()[:k]
-        doc_indices = sorted_result.tolist()[:k]
-        return doc_score, doc_indices
-        '''
 
     def get_relevant_doc_bulk(
         self, queries: List, k: Optional[int] = 1
@@ -356,11 +274,9 @@ class SparseRetrieval:
                 이 경우 `get_relevant_doc_bulk`를 통해 유사도를 구합니다.
             topk (Optional[int], optional): Defaults to 1.
                 상위 몇 개의 passage를 사용할 것인지 지정합니다.
-
         Returns:
             1개의 Query를 받는 경우  -> Tuple(List, List)
             다수의 Query를 받는 경우 -> pd.DataFrame: [description]
-
         Note:
             다수의 Query를 받는 경우,
                 Ground Truth가 있는 Query (train/valid) -> 기존 Ground Truth Passage를 같이 반환합니다.
