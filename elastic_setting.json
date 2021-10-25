@@ -1,31 +1,22 @@
- {
-    "settings" : {
-      "index":{
-        "analysis":{
-          "analyzer":{
-            "korean":{
-              "type":"custom",
-              "tokenizer":"nori_tokenizer",
-              "filter": [ "shingle" ]
-            }
-          }
-        }
-      }
+{
+    "settings": {
+        "analysis": {
+            "filter": {
+                "my_stop_filter": {
+                    "type": "stop",
+                    "stopwords_path": "user_dic/my_stop_dic.txt"
+                }
+            },
+            "analyzer": {
+                "nori_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "nori_tokenizer",
+                    "decompound_mode": "mixed",
+                    "filter": []
+                }
+            },
+            "similarity": {"my_similarity": {"type": "BM25"}}        }
     },
     "mappings": {
-  
-        "properties" : {
-          "content" : {
-            "type" : "text",
-            "analyzer": "korean",
-            "search_analyzer": "korean"
-          },
-          "title" : {
-            "type" : "text",
-            "analyzer": "korean",
-            "search_analyzer": "korean"
-          }
-        }
-  
-    }
-  }
+        "dynamic": "strict",
+        "properties": {"document_text": {"type": "text", "analyzer": "nori_analyzer"}}    }}

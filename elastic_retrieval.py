@@ -1,5 +1,3 @@
-import os
-import json
 import time
 import numpy as np
 import pandas as pd
@@ -14,11 +12,10 @@ from datasets import (
     load_from_disk,
     concatenate_datasets,
 )
-from scipy import sparse
 
 from elasticsearch import Elasticsearch
-from elasticsearch_retrieval import elastic_setting, search_es
-from run_elastic_search import preprocess
+from elastic_setting import preprocess
+
 
 @contextmanager
 def timer(name):
@@ -26,34 +23,50 @@ def timer(name):
     yield
     print(f"[{name}] done in {time.time() - t0:.3f} s")
 
+
+def elastic_setting(index_name="origin-wiki-index"):
+    config = {"host": "localhost", "port": 9200}
+    es = Elasticsearch([config])
+    print("elastic serach ping :", es.ping())
+
+    if es.indices.exists(args.index_name):
+        es.indices.delete(index=args.index_name)
+    print(es.indices.create(index=args.index_name, body=index_config, ignore=400))
+
+    return es, index_name
+
+
+def search_es(es, index_name, question_text, topk):
+    # index: index to search, body: query to search
+    query = {"query": {"match": {"document_text": question_text}}}
+    res = es.search(index=index_name, body=query, size=topk)  # size: default 10, top k
+
+    return res
+
+
 class SparseRetrieval:
-    def __init__(
-        self
-    ) -> NoReturn:
-        
-        #run_elastic_search.py를 먼저 실행시켜야합니다. 처음 한 번이면 될 것입니다!
-        self.es, self.index_name = elastic_setting(index_name='wiki-index')
-        
-        #삽입된 문서 1개 확인
-        print(self.es.get(index=self.index_name, id=1))
-        
+    def __init__(self) -> NoReturn:
+
+        # run_elastic_search.py를 먼저 실행시켜야합니다. 처음 한 번이면 될 것입니다!
+        self.es, self.index_name = elastic_setting(index_name="origin-wiki-index")
+
+        # 삽입된 문서 1개 확인(es 결과 확인)
+        # print(self.es.get(index=self.index_name, id=1))
 
     def retrieve_ES(
         self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1
     ) -> Union[Tuple[List, List], pd.DataFrame]:
-        
+
         # Retrieve한 Passage를 pd.DataFrame으로 반환합니다.
         total = []
         with timer("query exhaustive search"):
             doc_scores, doc_indices, doc = self.get_relevant_doc_bulk_ES(
-                query_or_dataset["question"], k=topk
+                query_or_dataset["question"], topk=topk
             )
-        for idx, example in enumerate(
-            tqdm(query_or_dataset, desc="ES retrieval: ")
-        ):
-            topK_context = ''
+        for idx, example in enumerate(tqdm(query_or_dataset, desc="ES retrieval: ")):
+            topK_context = ""
             for i in range(min(topk, len(doc[idx]))):
-                topK_context += doc[idx][i]['_source']['document_text']
+                topK_context += doc[idx][i]["_source"]["document_text"]
             tmp = {
                 # Query와 해당 id를 반환합니다.
                 "question": example["question"],
@@ -72,28 +85,28 @@ class SparseRetrieval:
         return cqas
 
     def get_relevant_doc_bulk_ES(
-        self, queries: List, k: Optional[int] = 1
+        self, queries: List, topk: Optional[int] = 1
     ) -> Tuple[List, List]:
-        
+
         doc = []
         doc_scores = []
         doc_indices = []
 
-        for question in queries :
-            
-            documents = search_es(self.es, self.index_name, question, k)
-            doc.append(documents['hits']['hits'])
-            
+        for question in queries:
+
+            documents = search_es(self.es, self.index_name, question, topk)
+            doc.append(documents["hits"]["hits"])
+
             doc_score = []
             doc_indice = []
 
-            for hit in documents['hits']['hits'] :
-                doc_score.append(hit['_score'])
-                doc_indice.append(hit['_id'])
+            for hit in documents["hits"]["hits"]:
+                doc_score.append(hit["_score"])
+                doc_indice.append(hit["_id"])
 
             doc_scores.append(doc_score)
             doc_indices.append(doc_indice)
-            
+
         return doc_scores, doc_indices, doc
 
 
@@ -116,22 +129,24 @@ if __name__ == "__main__":
     )  # train dev 를 합친 4192 개 질문에 대해 모두 테스트
     print("*" * 40, "query dataset", "*" * 40)
     print(full_ds)
-    
+
     retriever = SparseRetrieval()
 
     def topk_experiment(topK_list):
         result_dict = {}
-        #retriever.get_sparse_embedding()
+        # retriever.get_sparse_embedding()
         for topK in tqdm(topK_list):
-            result_retriever = retriever.retrieve_ES(full_ds,topk = topK)
-            #result_retriever.to_csv('/opt/ml/Mycode/result'+str(topK)+'.csv')
+            result_retriever = retriever.retrieve_ES(full_ds, topk=topK)
             correct = 0
             for index in range(len(result_retriever)):
-                if  result_retriever['original_context'][index] in result_retriever['context'][index]:
+                if (
+                    result_retriever["original_context"][index]
+                    in result_retriever["context"][index]
+                ):
                     correct += 1
-            result_dict[topK] = correct/len(result_retriever)
+            result_dict[topK] = correct / len(result_retriever)
         return result_dict
 
-    topK_list = [1,10,20,50]
+    topK_list = [1, 10, 20, 50]
     result = topk_experiment(topK_list)
     print(result)
