@@ -71,7 +71,7 @@ def preprocess(text):
 
 def load_wiki_data(args):
     # Load wiki data
-    if args.index_name == "orgin-wiki-index":
+    if args.index_name == "origin-wiki-index":
         dataset_path = "../data/wikipedia_documents.json"
 
     with open(dataset_path, "r") as f:
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--index_name",
         type=str,
-        default="orgin-wiki-index",
+        default="origin-wiki-index",
         help="Elastic search index name",
     )
 

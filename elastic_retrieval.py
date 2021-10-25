@@ -29,10 +29,6 @@ def elastic_setting(index_name="origin-wiki-index"):
     es = Elasticsearch([config])
     print("elastic serach ping :", es.ping())
 
-    if es.indices.exists(args.index_name):
-        es.indices.delete(index=args.index_name)
-    print(es.indices.create(index=args.index_name, body=index_config, ignore=400))
-
     return es, index_name
 
 
