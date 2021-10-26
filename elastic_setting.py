@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")  # default: show warnings
 def set_index_and_server(args):
     # Connect to elasticsearch
     config = {"host": "localhost", "port": 9200}
-    es = Elasticsearch([config])
+    es = Elasticsearch([config],timeout=30)
     print("Ping Elasticsearch :", es.ping())
 
     # Make index
