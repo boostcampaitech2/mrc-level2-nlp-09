@@ -2,6 +2,7 @@ import time
 import numpy as np
 import pandas as pd
 import argparse
+import Pororo
 
 from tqdm.auto import tqdm
 from contextlib import contextmanager
