@@ -60,7 +60,7 @@ def preprocess(text):
     text = re.sub(r"\\n", " ", text)
     #text = re.sub(r"\'", "", text) -> 안하는게
     text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"#", "", text) # 공백 없애는거
+    text = re.sub(r"#", " ", text)
     text = re.sub(
         r"[^a-zA-Z0-9가-힣ㄱ-ㅎㅏ-ㅣぁ-ゔァ-ヴー々〆〤一-龥<>()\s\.\?!》《≪≫\'<>〈〉:‘’%,『』「」＜＞・\"-“”∧]",
         "",
