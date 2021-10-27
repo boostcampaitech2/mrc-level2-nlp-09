@@ -2,6 +2,7 @@ import time
 import numpy as np
 import pandas as pd
 import argparse
+import Pororo
 
 from tqdm.auto import tqdm
 from contextlib import contextmanager
@@ -15,7 +16,7 @@ from datasets import (
 
 from elasticsearch import Elasticsearch
 from elastic_setting import preprocess
-from pororo import Pororo
+
 
 @contextmanager
 def timer(name):
@@ -102,7 +103,7 @@ class SparseRetrieval:
         doc_scores = []
         doc_indices = []
 
-        for question in tqdm(queries, desc="get_relevant_doc_bulk_ES: "):
+        for question in queries:
 
             documents = search_es(self.es, self.index_name, question, topk)
             doc.append(documents["hits"]["hits"])
