@@ -1,0 +1,29 @@
+{
+    "settings": {
+        "analysis": {
+            "filter": {
+                "my_stop_filter": {
+                    "type": "stop",
+                    "stopwords_path": "user_dic/my_stop_dic.txt"
+                },
+                "my_shingle":{
+                    "type":"shingle"
+                },
+                "my_stemmer":{
+                    "type": "stemmer"
+                }
+
+            },
+            "analyzer": {
+                "nori_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "nori_tokenizer",
+                    "decompound_mode": "mixed",
+                    "filter": ["my_shingle","my_stemmer"]
+                }
+            },
+            "similarity": {"my_similarity": {"type": "BM25"}}        }
+    },
+    "mappings": {
+        "dynamic": "strict",
+        "properties": {"document_text": {"type": "text", "analyzer": "nori_analyzer"}}    }}
