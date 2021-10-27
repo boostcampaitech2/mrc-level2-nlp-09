@@ -58,7 +58,7 @@ def insert_wiki_data(es, index_name):
 def preprocess(text):
     text = re.sub(r"\n", " ", text)
     text = re.sub(r"\\n", " ", text)
-    text = re.sub(r"\'", "", text)
+    #text = re.sub(r"\'", "", text)
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"#", " ", text)
     text = re.sub(
