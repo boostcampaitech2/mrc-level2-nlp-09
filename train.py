@@ -1,12 +1,14 @@
 import logging
 import os
 import sys
+import pandas as pd
+import torch
 
 from typing import List, Callable, NoReturn, NewType, Any
 import dataclasses
-from datasets import load_metric, load_from_disk, Dataset, DatasetDict
+from datasets import load_metric, load_from_disk, Dataset, DatasetDict, Features, Sequence, Value, concatenate_datasets
 
-from transformers import AutoConfig, AutoModelForQuestionAnswering, AutoTokenizer
+from transformers import AutoConfig, AutoModelForQuestionAnswering, AutoTokenizer, EarlyStoppingCallback
 
 from transformers import (
     DataCollatorWithPadding,
@@ -21,13 +23,14 @@ from tokenizers.models import WordPiece
 
 from utils_qa import postprocess_qa_predictions, check_no_error
 from trainer_qa import QuestionAnsweringTrainer
-from retrieval import SparseRetrieval
 
 from arguments import (
     ModelArguments,
     DataTrainingArguments,
 )
 
+from elastic_retrieval import SparseRetrieval
+import wandb
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +39,37 @@ def main():
     # 가능한 arguments 들은 ./arguments.py 나 transformer package 안의 src/transformers/training_args.py 에서 확인 가능합니다.
     # --help flag 를 실행시켜서 확인할 수 도 있습니다.
 
+    
     parser = HfArgumentParser(
-        (ModelArguments, DataTrainingArguments, TrainingArguments)
+        (ModelArguments, DataTrainingArguments)
     )
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    model_args, data_args= parser.parse_args_into_dataclasses()
     print(model_args.model_name_or_path)
 
     # [참고] argument를 manual하게 수정하고 싶은 경우에 아래와 같은 방식을 사용할 수 있습니다
     # training_args.per_device_train_batch_size = 4
     # print(training_args.per_device_train_batch_size)
-
+    
+    training_args = TrainingArguments(
+        do_train=True,
+        output_dir = '/opt/ml/code/models/train_dataset',
+        overwrite_output_dir=True,
+        evaluation_strategy='steps',
+        per_device_train_batch_size=16,
+        per_device_eval_batch_size=16,
+        gradient_accumulation_steps=2,
+        learning_rate=1e-5,
+        num_train_epochs=5,
+        warmup_ratio=0.1,
+        logging_strategy='steps',
+        logging_steps=100,
+        save_strategy='steps',
+        save_steps=500,
+        save_total_limit=1,
+        seed=42,
+        eval_steps=500,
+        metric_for_best_model='exact_match'
+    )
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_name}")
 
@@ -86,7 +110,6 @@ def main():
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
     )
-
     print(
         type(training_args),
         type(model_args),
@@ -97,6 +120,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=2')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
@@ -128,7 +152,9 @@ def run_mrc(
     last_checkpoint, max_seq_length = check_no_error(
         data_args, training_args, datasets, tokenizer
     )
-
+    
+    ES_retriever = SparseRetrieval()
+    
     # Train preprocessing / 전처리를 진행합니다.
     def prepare_train_features(examples):
         # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
@@ -204,8 +230,48 @@ def run_mrc(
                     while offsets[token_end_index][1] >= end_char:
                         token_end_index -= 1
                     tokenized_examples["end_positions"].append(token_end_index + 1)
-
         return tokenized_examples
+    
+    def prepare_train_features_ng(examples):
+        x = Dataset.from_dict(examples)
+        negative_df = ES_retriever.retrieve_ES(x, topk = 2)
+        negative_query = negative_df['question']
+        negative_contexts = negative_df['context']
+        negative_gt_contexts = negative_df['original_context']
+        nq_final = []
+        nc_final = []
+        for i in range(len(negative_query)):
+            temp_q = [negative_query[i] for _ in range((2-1))]
+            nq_final.extend(temp_q)
+            if negative_gt_contexts[i] in negative_contexts[i]:
+                negative_contexts[i].remove(negative_gt_contexts[i])
+                temp_c = negative_contexts[i]
+                nc_final.extend(temp_c)
+            else:
+                temp_c = negative_contexts[i][:(2-1)]
+                nc_final.extend(temp_c)
+        assert (len(nq_final)==len(nc_final)), f"nq_final length {len(nq_final)} should be same as nc_final {len(nc_final)}"
+        
+        tokenized_examples_ng = tokenizer(
+            nq_final if pad_on_right else nc_final,
+            nc_final if pad_on_right else nq_final,
+            truncation="only_second" if pad_on_right else "only_first",
+            max_length=max_seq_length,
+            stride=data_args.doc_stride,
+            return_overflowing_tokens=True,
+            return_offsets_mapping=True,
+            #return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+            padding="max_length" if data_args.pad_to_max_length else False,
+        )
+        tokenized_examples_ng.pop("overflow_to_sample_mapping")
+        tokenized_examples_ng.pop("offset_mapping")
+        tokenized_examples_ng["start_positions"] = []
+        tokenized_examples_ng["end_positions"] = []
+        
+        for i in range(len(tokenized_examples_ng['input_ids'])):
+            tokenized_examples_ng["start_positions"].append(0)
+            tokenized_examples_ng["end_positions"].append(0)
+        return tokenized_examples_ng
 
     if training_args.do_train:
         if "train" not in datasets:
@@ -213,13 +279,25 @@ def run_mrc(
         train_dataset = datasets["train"]
 
         # dataset에서 train feature를 생성합니다.
-        train_dataset = train_dataset.map(
+        train_dataset_ps = train_dataset.map(
             prepare_train_features,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
+        train_dataset_ng = train_dataset.map(
+            prepare_train_features_ng,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            remove_columns=column_names,
+            load_from_cache_file=not data_args.overwrite_cache,
+        )
+        train_dataset = concatenate_datasets([
+            train_dataset_ps.flatten_indices(),
+            train_dataset_ng.flatten_indices()
+        ])
+    print('train_dataset length : ',len(train_dataset))
 
     # Validation preprocessing
     def prepare_validation_features(examples):
@@ -271,6 +349,7 @@ def run_mrc(
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
+    print('valid_dataset length : ',len(eval_dataset))
 
     # Data collator
     # flag가 True이면 이미 max length로 padding된 상태입니다.
@@ -308,7 +387,12 @@ def run_mrc(
     metric = load_metric("squad")
 
     def compute_metrics(p: EvalPrediction):
-        return metric.compute(predictions=p.predictions, references=p.label_ids)
+        result = metric.compute(predictions=p.predictions, references=p.label_ids)
+        result['eval_exact_match'] = result['exact_match']
+        del result['exact_match']
+        result['eval_f1'] = result['f1']
+        del result['f1']
+        return result
 
     # Trainer 초기화
     trainer = QuestionAnsweringTrainer( 
@@ -321,6 +405,7 @@ def run_mrc(
         data_collator=data_collator,
         post_process_function=post_processing_function,
         compute_metrics=compute_metrics,
+        # callbacks = [EarlyStoppingCallback(ealry_stopping_patience=3)]
     )
 
     # Training
