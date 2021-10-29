@@ -15,7 +15,7 @@ from datasets import (
 
 from elasticsearch import Elasticsearch
 from elastic_setting import preprocess
-from pororo import Pororo
+#from pororo import Pororo
 
 @contextmanager
 def timer(name):
@@ -32,9 +32,8 @@ def elastic_setting(index_name="origin-wiki-index"):
     return es, index_name
 
 
-def search_es(es, index_name, question_text, topk):
+def search_es(es, index_name, question_text, topk, tagged):
     # index: index to search, body: query to search
-    ner = Pororo(task="ner", lang="ko")
     query = {
             "query": {
                 "bool": {
@@ -42,7 +41,7 @@ def search_es(es, index_name, question_text, topk):
                         {"match": {"document_text": question_text}}
                     ],
                     "should":[
-                        {"match": {"document_text": ' '.join([i[0] for i in ner(question_text) if i[1]!='O'])}}
+                        {"match": {"document_text": ' '.join([i[0] for i in tagged if i[1]!='O'])}}
                     ],
                 }
             }
@@ -64,14 +63,14 @@ class SparseRetrieval:
         # print(self.es.get(index=self.index_name, id=1))
 
     def retrieve_ES(
-        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1
+        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1, ner_path="/opt/ml/code/inference_tagged.csv"
     ) -> Union[Tuple[List, List], pd.DataFrame]:
 
         # Retrieve한 Passage를 pd.DataFrame으로 반환합니다.
         total = []
         with timer("query exhaustive search"):
             doc_scores, doc_indices, doc = self.get_relevant_doc_bulk_ES(
-                query_or_dataset["question"], topk=topk
+                query_or_dataset["question"], topk=topk, ner_path=ner_path
             )
         for idx, example in enumerate(tqdm(query_or_dataset, desc="ES retrieval: ")):
             topK_context = ""
@@ -95,16 +94,19 @@ class SparseRetrieval:
         return cqas
 
     def get_relevant_doc_bulk_ES(
-        self, queries: List, topk: Optional[int] = 1
+        self, queries: List, topk: Optional[int] = 1, ner_path=""
     ) -> Tuple[List, List]:
 
         doc = []
         doc_scores = []
         doc_indices = []
 
-        for question in tqdm(queries, desc="get_relevant_doc_bulk_ES: "):
+        df = pd.read_csv(ner_path)
+        df['pororo_ner'] = df['pororo_ner'].apply(eval)
 
-            documents = search_es(self.es, self.index_name, question, topk)
+        for question, tagged in tqdm(zip(queries, df['pororo_ner']), desc="get_relevant_doc_bulk_ES: "):
+
+            documents = search_es(self.es, self.index_name, question, topk, tagged)
             doc.append(documents["hits"]["hits"])
 
             doc_score = []
@@ -146,7 +148,7 @@ if __name__ == "__main__":
         result_dict = {}
         # retriever.get_sparse_embedding()
         for topK in tqdm(topK_list):
-            result_retriever = retriever.retrieve_ES(full_ds, topk=topK)
+            result_retriever = retriever.retrieve_ES(full_ds, topk=topK, ner_path="/opt/ml/code/train_tagged.csv")
             correct = 0
             for index in range(len(result_retriever)):
                 if (
@@ -157,6 +159,6 @@ if __name__ == "__main__":
             result_dict[topK] = correct / len(result_retriever)
         return result_dict
 
-    topK_list = [1, 10, 20, 50]
+    topK_list = [1, 5, 10, 15]
     result = topk_experiment(topK_list)
     print(result)
