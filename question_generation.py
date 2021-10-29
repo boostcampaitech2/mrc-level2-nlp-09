@@ -1,4 +1,6 @@
 import sys
+
+from pandas.core.indexes.base import ensure_index
 sys.path.append("..")
 import random
 from argparse import ArgumentParser
@@ -21,8 +23,14 @@ tokenizer = SentencePieceBPETokenizer.from_file(
     vocab_filename="/opt/ml/code/QG/tokenizer/vocab.json", merges_filename="/opt/ml/code/QG/tokenizer/merges.txt", add_prefix_space=False
 )
 
-examples = load_wiki_dataset('/opt/ml/data/wiki_text_title.csv')
-random.shuffle(examples)
+examples_list = load_wiki_dataset('/opt/ml/code/wiki_text_title.csv')
+random.shuffle(examples_list)
+examples=[]
+d_id=[]
+for i in examples_list:
+    examples.append(i[0])
+    d_id.append(i[1])
+
 dataset = QGDecodingDataset(examples, tokenizer, 512)
 dataloader = DataLoader(dataset, batch_size=1)
 
@@ -53,9 +61,9 @@ for i, batch in tqdm(enumerate(dataloader), desc="generate", total=len(dataloade
         decoded_question_text = tokenizer.decode(decoded_tokens[origin_seq_len:])
         decoded_question_text = decoded_question_text.split("</s>")[0].replace("<s>", "")
         generated_results.append(
-            (i, examples[i].answer, examples[i].question, decoded_question_text)
+            (i, examples[i].answer, examples[i].question, decoded_question_text, d_id[i])
         )
 
-with open('question_generation.tsv', "w") as f:
-    for context, answer, question, generated_question in generated_results:
-        f.write(f"{generated_question}\t{answer}\t{i}\n")
+with open('question_generation_id.tsv', "w") as f:
+    for context, answer, question, generated_question,d_id in generated_results:
+        f.write(f"{generated_question}\t{answer}\t{d_id}\n")
