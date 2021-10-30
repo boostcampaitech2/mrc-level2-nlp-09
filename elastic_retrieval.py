@@ -73,9 +73,12 @@ class SparseRetrieval:
                 query_or_dataset["question"], topk=topk, ner_path=ner_path
             )
         for idx, example in enumerate(tqdm(query_or_dataset, desc="ES retrieval: ")):
-            topK_context = ""
+            # topK_context = ""
+            # for i in range(min(topk, len(doc[idx]))):
+            #     topK_context += doc[idx][i]["_source"]["document_text"]
+            topK_context = []
             for i in range(min(topk, len(doc[idx]))):
-                topK_context += doc[idx][i]["_source"]["document_text"]
+                topK_context.append(doc[idx][i]["_source"]["document_text"])
             tmp = {
                 # Query와 해당 id를 반환합니다.
                 "question": example["question"],

@@ -9,7 +9,7 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        default="klue/bert-base",
+        default="klue/roberta-large",
         metadata={
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
@@ -82,7 +82,13 @@ class DataTrainingArguments:
         default=64, metadata={"help": "Define how many clusters to use for faiss."}
     )
     top_k_retrieval: int = field(
-        default=1,
+        default=10,
+        metadata={
+            "help": "Define how many top-k passages to retrieve based on similarity."
+        },
+    )
+    ng_top_k_retrieval: int = field(
+        default=2,
         metadata={
             "help": "Define how many top-k passages to retrieve based on similarity."
         },

@@ -3,3 +3,6 @@
 /*__pycache__
 nohup.out
 *.tsv
+__pycache__/
+.ipynb_checkpoints/
+wandb/
