@@ -15,15 +15,15 @@ from QG.korquad_qg.config import QGConfig
 from QG.korquad_qg.dataset import (MAX_QUESTION_SPACE, MIN_QUESTION_SPACE, QGDecodingDataset, load_wiki_dataset)
 
 model = GPT2LMHeadModel.from_pretrained("taeminlee/kogpt2")
-model.load_state_dict(torch.load('/opt/ml/code/QG/model/QG_kogpt2.pth', map_location="cpu"))
+model.load_state_dict(torch.load('QG/model/QG_kogpt2.pth', map_location="cpu"))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
 tokenizer = SentencePieceBPETokenizer.from_file(
-    vocab_filename="/opt/ml/code/QG/tokenizer/vocab.json", merges_filename="/opt/ml/code/QG/tokenizer/merges.txt", add_prefix_space=False
+    vocab_filename="QG/tokenizer/vocab.json", merges_filename="QG/tokenizer/merges.txt", add_prefix_space=False
 )
 
-examples_list = load_wiki_dataset('/opt/ml/code/wiki_text_title.csv')
+examples_list = load_wiki_dataset('QG_utils/wiki_text_title.csv')
 random.shuffle(examples_list)
 examples=[]
 d_id=[]
