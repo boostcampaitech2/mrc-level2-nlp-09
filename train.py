@@ -234,21 +234,21 @@ def run_mrc(
     
     def prepare_train_features_ng(examples):
         x = Dataset.from_dict(examples)
-        negative_df = ES_retriever.retrieve_ES(x, topk = 2)
+        negative_df = ES_retriever.retrieve_ES(x, topk = data_args.ng_top_k_retrieval)
         negative_query = negative_df['question']
         negative_contexts = negative_df['context']
         negative_gt_contexts = negative_df['original_context']
         nq_final = []
         nc_final = []
         for i in range(len(negative_query)):
-            temp_q = [negative_query[i] for _ in range((2-1))]
+            temp_q = [negative_query[i] for _ in range((data_args.ng_top_k_retrieval-1))]
             nq_final.extend(temp_q)
             if negative_gt_contexts[i] in negative_contexts[i]:
                 negative_contexts[i].remove(negative_gt_contexts[i])
                 temp_c = negative_contexts[i]
                 nc_final.extend(temp_c)
             else:
-                temp_c = negative_contexts[i][:(2-1)]
+                temp_c = negative_contexts[i][:(data_args.ng_top_k_retrieval-1)]
                 nc_final.extend(temp_c)
         assert (len(nq_final)==len(nc_final)), f"nq_final length {len(nq_final)} should be same as nc_final {len(nc_final)}"
         

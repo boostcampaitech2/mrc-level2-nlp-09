@@ -31,7 +31,7 @@ from transformers import (
     set_seed,
 )
 
-from utils_qa import postprocess_qa_predictions, check_no_error
+from utils_qa import postprocess_qa_predictions_inf, check_no_error
 from trainer_qa import QuestionAnsweringTrainer
 from elastic_retrieval import SparseRetrieval
 
@@ -117,11 +117,7 @@ def run_sparse_retrieval(
 ) -> DatasetDict:
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
-    retriever = SparseRetrieval(
-        #tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
-    )
-    #retriever.get_sparse_embedding()
-
+    retriever = SparseRetrieval()
     
     df = retriever.retrieve_ES(datasets["validation"], topk=data_args.top_k_retrieval)
 
@@ -129,7 +125,7 @@ def run_sparse_retrieval(
     if training_args.do_predict:
         f = Features(
             {
-                "context": Value(dtype="string", id=None),
+                "context": Sequence(feature = Value(dtype="string", id=None)), #바꿈!
                 "id": Value(dtype="string", id=None),
                 "question": Value(dtype="string", id=None),
             }
@@ -147,7 +143,7 @@ def run_sparse_retrieval(
                     length=-1,
                     id=None,
                 ),
-                "context": Value(dtype="string", id=None),
+                "context": Sequence(feature = Value(dtype="string", id=None)), #바꿈!
                 "id": Value(dtype="string", id=None),
                 "question": Value(dtype="string", id=None),
             }
@@ -180,14 +176,26 @@ def run_mrc(
     last_checkpoint, max_seq_length = check_no_error(
         data_args, training_args, datasets, tokenizer
     )
-
-    # Validation preprocessing / 전처리를 진행합니다.
+    #싹 바꿈!
     def prepare_validation_features(examples):
-        # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
-        # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
+        test_query = examples['question']
+        test_contexts = examples['context']
+        test_id = examples['id']
+        topk = len(test_contexts[0])
+        assert (topk == data_args.top_k_retrieval), 'topk not correct'
+        tq_final = []
+        tc_final = []
+        ti_final = []
+        for i in range(len(test_query)):
+            temp_q = [test_query[i] for _ in range(topk)]
+            temp_i = [test_id[i] for _ in range(topk)]
+            tq_final.extend(temp_q)
+            ti_final.extend(temp_i)
+            tc_final.extend(test_contexts[i])
+        assert (len(tq_final)==len(ti_final) and len(tq_final)==len(tc_final)), 'final list length not correct'
         tokenized_examples = tokenizer(
-            examples[question_column_name if pad_on_right else context_column_name],
-            examples[context_column_name if pad_on_right else question_column_name],
+            tq_final if pad_on_right else tc_final,
+            tc_final if pad_on_right else tq_final,
             truncation="only_second" if pad_on_right else "only_first",
             max_length=max_seq_length,
             stride=data_args.doc_stride,
@@ -196,24 +204,14 @@ def run_mrc(
             return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
             padding="max_length" if data_args.pad_to_max_length else False,
         )
-
-        # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
-        sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
-
-        # evaluation을 위해, prediction을 context의 substring으로 변환해야합니다.
-        # corresponding example_id를 유지하고 offset mappings을 저장해야합니다.
+        sample_mapping = tokenized_examples["overflow_to_sample_mapping"]
         tokenized_examples["example_id"] = []
-
         for i in range(len(tokenized_examples["input_ids"])):
-            # sequence id를 설정합니다 (to know what is the context and what is the question).
             sequence_ids = tokenized_examples.sequence_ids(i)
             context_index = 1 if pad_on_right else 0
-
-            # 하나의 example이 여러개의 span을 가질 수 있습니다.
             sample_index = sample_mapping[i]
-            tokenized_examples["example_id"].append(examples["id"][sample_index])
-
-            # context의 일부가 아닌 offset_mapping을 None으로 설정하여 토큰 위치가 컨텍스트의 일부인지 여부를 쉽게 판별할 수 있습니다.
+            tokenized_examples["example_id"].append(ti_final[sample_index])
+            
             tokenized_examples["offset_mapping"][i] = [
                 (o if sequence_ids[k] == context_index else None)
                 for k, o in enumerate(tokenized_examples["offset_mapping"][i])
@@ -246,10 +244,12 @@ def run_mrc(
         training_args: TrainingArguments,
     ) -> EvalPrediction:
         # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
-        predictions = postprocess_qa_predictions(
+        # 바꿈!
+        predictions = postprocess_qa_predictions_inf(
             examples=examples,
             features=features,
             predictions=predictions,
+            topk = data_args.top_k_retrieval,
             max_answer_length=data_args.max_answer_length,
             output_dir=training_args.output_dir,
         )

@@ -90,7 +90,7 @@ class DataTrainingArguments:
     ng_top_k_retrieval: int = field(
         default=2,
         metadata={
-            "help": "Define how many top-k passages to retrieve based on similarity."
+            "help": "Define how many top-k passages to include in negative samples"
         },
     )
     use_faiss: bool = field(
