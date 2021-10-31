@@ -231,7 +231,7 @@ def run_mrc(
                         token_end_index -= 1
                     tokenized_examples["end_positions"].append(token_end_index + 1)
         return tokenized_examples
-    
+    #negative sampling
     def prepare_train_features_ng(examples):
         x = Dataset.from_dict(examples)
         negative_df = ES_retriever.retrieve_ES(x, topk = data_args.ng_top_k_retrieval)
