@@ -23,7 +23,7 @@ tokenizer = SentencePieceBPETokenizer.from_file(
     vocab_filename="QG/tokenizer/vocab.json", merges_filename="QG/tokenizer/merges.txt", add_prefix_space=False
 )
 
-examples_list = load_wiki_dataset('QG_utils/wiki_text_title.csv')
+examples_list = load_wiki_dataset('QG_utils/remove_wiki_text_title.csv')
 random.shuffle(examples_list)
 examples=[]
 d_id=[]
@@ -64,6 +64,6 @@ for i, batch in tqdm(enumerate(dataloader), desc="generate", total=len(dataloade
             (i, examples[i].answer, examples[i].question, decoded_question_text, d_id[i])
         )
 
-with open('question_generation_id.tsv', "w") as f:
+with open('remove_question_generation_id.tsv', "w") as f:
     for context, answer, question, generated_question,d_id in generated_results:
         f.write(f"{generated_question}\t{answer}\t{d_id}\n")
