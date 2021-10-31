@@ -21,13 +21,13 @@ from tokenizers.models import WordPiece
 
 from utils_qa import postprocess_qa_predictions, check_no_error
 from trainer_qa import QuestionAnsweringTrainer
-from retrieval import SparseRetrieval
+# from retrieval import SparseRetrieval
 
 from arguments import (
     ModelArguments,
     DataTrainingArguments,
 )
-
+from model import Model
 
 logger = logging.getLogger(__name__)
 
@@ -81,11 +81,12 @@ def main():
         # rust version이 비교적 속도가 빠릅니다.
         use_fast=True,
     )
-    model = AutoModelForQuestionAnswering.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-    )
+    # model = AutoModelForQuestionAnswering.from_pretrained(
+    #     model_args.model_name_or_path,
+    #     from_tf=bool(".ckpt" in model_args.model_name_or_path),
+    #     config=config,
+    # )
+    model= Model('klue/roberta-large')
 
     print(
         type(training_args),
@@ -204,6 +205,8 @@ def run_mrc(
                     while offsets[token_end_index][1] >= end_char:
                         token_end_index -= 1
                     tokenized_examples["end_positions"].append(token_end_index + 1)
+            
+            # print(tokenizer.decode(tokenized_examples['input_ids'][i][tokenized_examples['start_positions'][i]:tokenized_examples['end_positions'][i]+1]), answers)
 
         return tokenized_examples
 
@@ -258,6 +261,7 @@ def run_mrc(
                 (o if sequence_ids[k] == context_index else None)
                 for k, o in enumerate(tokenized_examples["offset_mapping"][i])
             ]
+            
         return tokenized_examples
 
     if training_args.do_eval:

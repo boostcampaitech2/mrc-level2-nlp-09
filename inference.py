@@ -21,7 +21,7 @@ from datasets import (
     DatasetDict,
 )
 
-from transformers import AutoConfig, AutoModelForQuestionAnswering, AutoTokenizer
+from transformers import AutoConfig, AutoModelForQuestionAnswering, AutoTokenizer, AutoModel
 
 from transformers import (
     DataCollatorWithPadding,
@@ -39,6 +39,9 @@ from arguments import (
     ModelArguments,
     DataTrainingArguments,
 )
+
+from model import Model
+import torch
 
 
 logger = logging.getLogger(__name__)
@@ -76,22 +79,16 @@ def main():
 
     # AutoConfig를 이용하여 pretrained model 과 tokenizer를 불러옵니다.
     # argument로 원하는 모델 이름을 설정하면 옵션을 바꿀 수 있습니다.
-    config = AutoConfig.from_pretrained(
-        model_args.config_name
-        if model_args.config_name
-        else model_args.model_name_or_path,
-    )
+    
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name
-        if model_args.tokenizer_name
-        else model_args.model_name_or_path,
+        'klue/roberta-large',
         use_fast=True,
     )
-    model = AutoModelForQuestionAnswering.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-    )
+    
+    model= Model('klue/roberta-large')
+    model.load_state_dict(torch.load('/opt/ml/EL_TEST/models/train_dataset/pytorch_model.bin'))
+
+
 
     # True일 경우 : run passage retrieval
     if data_args.eval_retrieval:
