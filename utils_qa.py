@@ -446,6 +446,14 @@ def postprocess_qa_predictions_inf(
             # 각 featureure에 대한 모든 prediction을 가져옵니다.
             start_logits = all_start_logits[feature_index]
             end_logits = all_end_logits[feature_index]
+            #softmax로 변환하는 과정
+            start_logits = np.array(start_logits)
+            exp_start = np.exp(start_logits-np.max(start_logits))
+            start_logits = exp_start / exp_start.sum()
+            end_logits = np.array(end_logits)
+            exp_end = np.exp(end_logits-np.max(end_logits))
+            end_logits = exp_end / exp_end.sum()
+            
             # logit과 original context의 logit을 mapping합니다.
             offset_mapping = features[feature_index]["offset_mapping"]
             #바꿈!
@@ -470,9 +478,7 @@ def postprocess_qa_predictions_inf(
                 }
 
             # `n_best_size`보다 큰 start and end logits을 살펴봅니다.
-            start_indexes = np.argsort(start_logits)[
-                -1 : -n_best_size - 1 : -1
-            ].tolist()
+            start_indexes = np.argsort(start_logits)[-1 : -n_best_size - 1 : -1].tolist()
 
             end_indexes = np.argsort(end_logits)[-1 : -n_best_size - 1 : -1].tolist()
 
@@ -505,7 +511,9 @@ def postprocess_qa_predictions_inf(
                                 offset_mapping[start_index][0],
                                 offset_mapping[end_index][1],
                             ),
-                            "score": start_logits[start_index] + end_logits[end_index],
+                            # "score": start_logits[start_index] + end_logits[end_index],
+                            # 확률로 바꿨으니 이제 곱해야지!!
+                            "score": start_logits[start_index] * end_logits[end_index],
                             "start_logit": start_logits[start_index],
                             "end_logit": end_logits[end_index],
                         }

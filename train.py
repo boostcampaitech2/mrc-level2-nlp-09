@@ -31,6 +31,7 @@ from arguments import (
 
 from elastic_retrieval import SparseRetrieval
 import wandb
+from elastic_setting import preprocess
 
 logger = logging.getLogger(__name__)
 
@@ -52,23 +53,24 @@ def main():
     
     training_args = TrainingArguments(
         do_train=True,
-        output_dir = '/opt/ml/code/models/train_dataset',
+        output_dir = '/opt/ml/code/models/train_dataset_qg',
         overwrite_output_dir=True,
         evaluation_strategy='steps',
         per_device_train_batch_size=16,
         per_device_eval_batch_size=16,
         gradient_accumulation_steps=2,
         learning_rate=1e-5,
-        num_train_epochs=5,
+        num_train_epochs=8,
         warmup_ratio=0.1,
         logging_strategy='steps',
         logging_steps=100,
         save_strategy='steps',
-        save_steps=500,
+        save_steps=300,
         save_total_limit=1,
         seed=42,
-        eval_steps=500,
-        metric_for_best_model='exact_match'
+        eval_steps=300,
+        metric_for_best_model='exact_match',
+        load_best_model_at_end=True,
     )
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_name}")
@@ -120,7 +122,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
-        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=2')
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling + preprocess topk=2')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
@@ -159,6 +161,21 @@ def run_mrc(
     def prepare_train_features(examples):
         # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
         # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
+        # 원본 데이터 context 전처리 및 그에 따른 answer_position 이동
+        for i in range(len(examples[context_column_name])):
+            context = examples[context_column_name][i]
+            answer = examples[answer_column_name][i]
+            answer_start = answer['answer_start'][0]
+            answer_text = answer['text'][0]
+            answer_end = answer_start + len(answer_text)
+            context_pre = context[:answer_start]
+            context_post = context[answer_end:]
+            context_pre = preprocess(context_pre)
+            context_post = preprocess(context_post)
+            new_answer_start = len(context_pre)
+            examples[context_column_name][i] = context_pre + answer_text + context_post
+            examples[answer_column_name][i] = {'answer_start' : [new_answer_start], 'text' : [answer_text]}
+        
         tokenized_examples = tokenizer(
             examples[question_column_name if pad_on_right else context_column_name],
             examples[context_column_name if pad_on_right else question_column_name],
@@ -231,6 +248,7 @@ def run_mrc(
                         token_end_index -= 1
                     tokenized_examples["end_positions"].append(token_end_index + 1)
         return tokenized_examples
+    
     #negative sampling
     def prepare_train_features_ng(examples):
         x = Dataset.from_dict(examples)
@@ -293,9 +311,18 @@ def run_mrc(
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
+        # train_dataset_qg = load_from_disk('/opt/ml/data/qg_origin_dataset/')
+        # train_dataset_qg = train_dataset_qg.map(
+        #     prepare_train_features,
+        #     batched=True,
+        #     num_proc=data_args.preprocessing_num_workers,
+        #     remove_columns=train_dataset_qg.column_names,
+        #     load_from_cache_file=not data_args.overwrite_cache,
+        # )
         train_dataset = concatenate_datasets([
             train_dataset_ps.flatten_indices(),
-            train_dataset_ng.flatten_indices()
+            train_dataset_ng.flatten_indices(),
+            # train_dataset_qg.flatten_indices(),
         ])
     print('train_dataset length : ',len(train_dataset))
 
@@ -303,6 +330,20 @@ def run_mrc(
     def prepare_validation_features(examples):
         # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
         # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
+        for i in range(len(examples[context_column_name])):
+            context = examples[context_column_name][i]
+            answer = examples[answer_column_name][i]
+            answer_start = answer['answer_start'][0]
+            answer_text = answer['text'][0]
+            answer_end = answer_start + len(answer_text)
+            context_pre = context[:answer_start]
+            context_post = context[answer_end:]
+            context_pre = preprocess(context_pre)
+            context_post = preprocess(context_post)
+            new_answer_start = len(context_pre)
+            examples[context_column_name][i] = context_pre + answer_text + context_post
+            examples[answer_column_name][i] = {'answer_start' : [new_answer_start], 'text' : [answer_text]}
+        
         tokenized_examples = tokenizer(
             examples[question_column_name if pad_on_right else context_column_name],
             examples[context_column_name if pad_on_right else question_column_name],
@@ -405,7 +446,7 @@ def run_mrc(
         data_collator=data_collator,
         post_process_function=post_processing_function,
         compute_metrics=compute_metrics,
-        # callbacks = [EarlyStoppingCallback(ealry_stopping_patience=3)]
+        callbacks = [EarlyStoppingCallback(early_stopping_patience=5)]
     )
 
     # Training

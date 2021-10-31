@@ -76,8 +76,17 @@ class SparseRetrieval:
             }
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환합니다.
-                tmp["original_context"] = preprocess(example["context"])
-                tmp["answers"] = example["answers"]
+                # og_context도 전처리하고 그에 따른 answer 위치 이동 반영
+                answer_start = example['answers']['answer_start'][0]
+                answer_end = answer_start + len(example['answers']['text'][0])
+                answer_text = example['answers']['text'][0]
+                context_pre = example['context'][:answer_start]
+                context_post = example['context'][answer_end:]
+                context_pre = preprocess(context_pre)
+                context_post = preprocess(context_post)
+                new_answer_start = len(context_pre)
+                tmp["original_context"] = context_pre + answer_text + context_post
+                tmp["answers"] = {'answer_start': [new_answer_start], 'text': [answer_text]}
             total.append(tmp)
 
         cqas = pd.DataFrame(total)
