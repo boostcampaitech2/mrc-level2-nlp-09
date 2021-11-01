@@ -19,7 +19,7 @@
                     "type": "custom",
                     "tokenizer": "nori_tokenizer",
                     "decompound_mode": "mixed",
-                    "filter": ["my_shingle","my_stemmer", "my_stop_filter"]
+                    "filter": ["my_shingle","my_stemmer"]
                 }
             },
             "similarity": {"my_similarity": {"type": "BM25"}}        }
