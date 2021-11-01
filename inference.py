@@ -249,7 +249,7 @@ def run_mrc(
             examples=examples,
             features=features,
             predictions=predictions,
-            # topk = data_args.top_k_retrieval,
+            topk = data_args.top_k_retrieval,
             max_answer_length=data_args.max_answer_length,
             output_dir=training_args.output_dir,
         )
