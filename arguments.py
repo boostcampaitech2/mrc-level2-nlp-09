@@ -88,7 +88,7 @@ class DataTrainingArguments:
         },
     )
     ng_top_k_retrieval: int = field(
-        default=2,
+        default=3,
         metadata={
             "help": "Define how many top-k passages to include in negative samples"
         },

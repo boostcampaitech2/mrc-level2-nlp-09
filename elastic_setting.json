@@ -4,7 +4,7 @@
             "filter": {
                 "my_stop_filter": {
                     "type": "stop",
-                    "stopwords_path": "user_dic/my_stop_dic.txt"
+                    "stopwords_path": "user_dic/my_stop_dict.txt"
                 },
                 "my_shingle":{
                     "type":"shingle"
@@ -19,7 +19,7 @@
                     "type": "custom",
                     "tokenizer": "nori_tokenizer",
                     "decompound_mode": "mixed",
-                    "filter": ["my_shingle","my_stemmer"]
+                    "filter": ["my_shingle","my_stemmer", "my_stop_filter"]
                 }
             },
             "similarity": {"my_similarity": {"type": "BM25"}}        }
