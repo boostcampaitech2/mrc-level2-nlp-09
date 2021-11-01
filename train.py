@@ -53,7 +53,7 @@ def main():
     
     training_args = TrainingArguments(
         do_train=True,
-        output_dir = '/opt/ml/code/models/train_dataset_qg',
+        output_dir = '/opt/ml/code/models/train_dataset',
         overwrite_output_dir=True,
         evaluation_strategy='steps',
         per_device_train_batch_size=16,
@@ -122,7 +122,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
-        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling + preprocess topk=2')
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader no negative sampling + inference topk=20')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
@@ -330,20 +330,6 @@ def run_mrc(
     def prepare_validation_features(examples):
         # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
         # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
-        for i in range(len(examples[context_column_name])):
-            context = examples[context_column_name][i]
-            answer = examples[answer_column_name][i]
-            answer_start = answer['answer_start'][0]
-            answer_text = answer['text'][0]
-            answer_end = answer_start + len(answer_text)
-            context_pre = context[:answer_start]
-            context_post = context[answer_end:]
-            context_pre = preprocess(context_pre)
-            context_post = preprocess(context_post)
-            new_answer_start = len(context_pre)
-            examples[context_column_name][i] = context_pre + answer_text + context_post
-            examples[answer_column_name][i] = {'answer_start' : [new_answer_start], 'text' : [answer_text]}
-        
         tokenized_examples = tokenizer(
             examples[question_column_name if pad_on_right else context_column_name],
             examples[context_column_name if pad_on_right else question_column_name],
@@ -381,16 +367,29 @@ def run_mrc(
 
     if training_args.do_eval:
         eval_dataset = datasets["validation"]
+        for i in range(len(eval_dataset[context_column_name])):
+            context = eval_dataset[context_column_name][i]
+            answer = eval_dataset[answer_column_name][i]
+            answer_start = answer['answer_start'][0]
+            answer_text = answer['text'][0]
+            answer_end = answer_start + len(answer_text)
+            context_pre = context[:answer_start]
+            context_post = context[answer_end:]
+            context_pre = preprocess(context_pre)
+            context_post = preprocess(context_post)
+            new_answer_start = len(context_pre)
+            eval_dataset[context_column_name][i] = context_pre + answer_text + context_post
+            eval_dataset[answer_column_name][i] = {'answer_start' : [new_answer_start], 'text' : [answer_text]}
 
         # Validation Feature 생성
-        eval_dataset = eval_dataset.map(
+        eval_dataset_tokenized = eval_dataset.map(
             prepare_validation_features,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-    print('valid_dataset length : ',len(eval_dataset))
+    print('valid_dataset length : ',len(eval_dataset_tokenized))
 
     # Data collator
     # flag가 True이면 이미 max length로 padding된 상태입니다.
@@ -440,8 +439,8 @@ def run_mrc(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
-        eval_examples=datasets["validation"] if training_args.do_eval else None,
+        eval_dataset=eval_dataset_tokenized if training_args.do_eval else None,
+        eval_examples=eval_dataset if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
         post_process_function=post_processing_function,
@@ -485,7 +484,7 @@ def run_mrc(
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
 
-        metrics["eval_samples"] = len(eval_dataset)
+        metrics["eval_samples"] = len(eval_dataset_tokenized)
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
