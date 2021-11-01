@@ -46,7 +46,7 @@ def search_es(es, index_name, question_text, topk, tagged):
                 }
             }
         }
-    #
+    
     #query = {"query": {"match": {"document_text": question_text}}}
     res = es.search(index=index_name, body=query, size=topk)  # size: default 10, top k
 
@@ -70,12 +70,15 @@ class SparseRetrieval:
         total = []
         with timer("query exhaustive search"):
             doc_scores, doc_indices, doc = self.get_relevant_doc_bulk_ES(
-                query_or_dataset["question"], topk=topk, ner_path=ner_path
+                query_or_dataset["question"], topk=topk, ner_path=ner_path,
             )
         for idx, example in enumerate(tqdm(query_or_dataset, desc="ES retrieval: ")):
-            topK_context = ""
+            # topK_context = ""
+            # for i in range(min(topk, len(doc[idx]))):
+            #     topK_context += doc[idx][i]["_source"]["document_text"]
+            topK_context = []
             for i in range(min(topk, len(doc[idx]))):
-                topK_context += doc[idx][i]["_source"]["document_text"]
+                topK_context.append(doc[idx][i]["_source"]["document_text"])
             tmp = {
                 # Query와 해당 id를 반환합니다.
                 "question": example["question"],
@@ -86,8 +89,17 @@ class SparseRetrieval:
             }
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환합니다.
-                tmp["original_context"] = preprocess(example["context"])
-                tmp["answers"] = example["answers"]
+                # og_context도 전처리하고 그에 따른 answer 위치 이동 반영
+                answer_start = example['answers']['answer_start'][0]
+                answer_end = answer_start + len(example['answers']['text'][0])
+                answer_text = example['answers']['text'][0]
+                context_pre = example['context'][:answer_start]
+                context_post = example['context'][answer_end:]
+                context_pre = preprocess(context_pre)
+                context_post = preprocess(context_post)
+                new_answer_start = len(context_pre)
+                tmp["original_context"] = context_pre + answer_text + context_post
+                tmp["answers"] = {'answer_start': [new_answer_start], 'text': [answer_text]}
             total.append(tmp)
 
         cqas = pd.DataFrame(total)
