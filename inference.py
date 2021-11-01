@@ -119,7 +119,7 @@ def run_sparse_retrieval(
     # Query에 맞는 Passage들을 Retrieval 합니다.
     retriever = SparseRetrieval()
     
-    df = retriever.retrieve_ES(datasets["validation"], topk=data_args.top_k_retrieval)
+    df = retriever.retrieve_ES(datasets["validation"], topk=data_args.top_k_retrieval, ner_path="/opt/ml/code/inference_tagged.csv")
 
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if training_args.do_predict:
@@ -217,7 +217,7 @@ def run_mrc(
                 for k, o in enumerate(tokenized_examples["offset_mapping"][i])
             ]
         return tokenized_examples
-
+    
     eval_dataset = datasets["validation"]
 
     # Validation Feature 생성
@@ -249,7 +249,7 @@ def run_mrc(
             examples=examples,
             features=features,
             predictions=predictions,
-            topk = data_args.top_k_retrieval,
+            # topk = data_args.top_k_retrieval,
             max_answer_length=data_args.max_answer_length,
             output_dir=training_args.output_dir,
         )

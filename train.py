@@ -252,7 +252,7 @@ def run_mrc(
     #negative sampling
     def prepare_train_features_ng(examples):
         x = Dataset.from_dict(examples)
-        negative_df = ES_retriever.retrieve_ES(x, topk = data_args.ng_top_k_retrieval)
+        negative_df = ES_retriever.retrieve_ES(x, topk = data_args.ng_top_k_retrieval, ner_path="/opt/ml/code/train_tagged.csv")
         negative_query = negative_df['question']
         negative_contexts = negative_df['context']
         negative_gt_contexts = negative_df['original_context']
