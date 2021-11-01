@@ -53,7 +53,7 @@ def main():
     
     training_args = TrainingArguments(
         do_train=True,
-        output_dir = '/opt/ml/code/models/train_dataset',
+        output_dir = '/opt/ml/code/models/train_dataset_ngtopk3',
         overwrite_output_dir=True,
         evaluation_strategy='steps',
         per_device_train_batch_size=16,
@@ -122,7 +122,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
-        run=wandb.init(project='mrc', entity='quarter100', name='Reader no negative sampling + inference topk=20')
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=3 + inference topk=20')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
