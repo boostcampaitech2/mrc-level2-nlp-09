@@ -14,7 +14,7 @@
 
 
 ## Inference
-<<python inference.py --output_dir ./outputs/test_dataset/ --dataset_name ../data/test_dataset/ --model_name_or_path ./models/train_dataset/checkpoint-2500/ --do_predict>>
+<<python inference.py --output_dir ./outputs/test_dataset/ --dataset_name ../data/test_dataset/ --model_name_or_path ./models/train_dataset/ --do_predict>>
 의 형식으로 실행해야 합니다. --model_name_or_path는 저장된 가장 좋은 파라미터 파일이 들어있는 폴더를 넣어주면 됨
 
 ## 주의사항

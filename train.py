@@ -77,7 +77,7 @@ def main():
     folds = [fold1, fold2, fold3, fold4, fold5]
 
     # range안의 숫자를 조절하여 특정 fold만 학습할 수 있습니다. fold로 들어갈 수 있는 숫자는 1~5입니다.(range(1,6))
-    for fold in range(1, 6):
+    for fold in range(3, 4):
         training_args = TrainingArguments(
             do_train=True,
             output_dir="./models/train_dataset_ngqg_fold" + str(fold),
@@ -102,6 +102,8 @@ def main():
         print(f"model is from {model_args.model_name_or_path}")
         print(f"data is from {data_args.dataset_name}")
 
+
+        
         # 모델을 초기화하기 전에 난수를 고정합니다.
         set_seed(training_args.seed)
 
@@ -132,14 +134,23 @@ def main():
                 "question": Value(dtype="string", id=None),
             }
         )
+        """
+        train_fold_dataset = Dataset.from_pandas(df, features=f)
+        train_fold_dataset.save_to_disk("./fold_train_dataset/")
+        validation_fold_dataset = Dataset.from_pandas(folds[fold - 1], features=f)
+        validation_fold_dataset.save_to_disk("./fold_valid_dataset/")
+        """
+        
         datasets = DatasetDict(
             {
+
                 "train": Dataset.from_pandas(df, features=f),
                 "validation": Dataset.from_pandas(folds[fold - 1], features=f),
             }
         )
-
-        # datasets = load_from_disk(data_args.dataset_name)
+        
+        datasets.save_to_disk("./fold_dataset/")
+        datasets = load_from_disk("./fold_dataset/")
         print(datasets)
 
         # AutoConfig를 이용하여 pretrained model 과 tokenizer를 불러옵니다.
