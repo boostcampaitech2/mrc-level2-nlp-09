@@ -23,6 +23,7 @@ train.py의 158과 159번 줄 사이에 qg_df = qg_df.iloc[1:1200] 추가 1200�
 train.py의 319번 줄에 train_dataset_qg = qg_dataset.map로 바꾸기 [1:500] 삭제  
 train.py의 318 ~ 325번 줄과 329번 줄의 주석을 해제 train_dataset_qg.flatten_indices() 
 
+
 3. max_seq_length (default 384) (김다영) \\
 arguments.py의 max_seq_length를 512로 조정
 
