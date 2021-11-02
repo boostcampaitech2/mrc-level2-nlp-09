@@ -53,7 +53,7 @@ def main():
     
     training_args = TrainingArguments(
         do_train=True,
-        output_dir = '/opt/ml/code/models/train_dataset_ngtopk3_pororo',
+        output_dir = './models/train_dataset_ngtopk3_pororo',
         overwrite_output_dir=True,
         evaluation_strategy='steps',
         per_device_train_batch_size=16,
@@ -122,7 +122,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
-        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=3 + pororo ')
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=3 + pororo')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
@@ -154,6 +154,10 @@ def run_mrc(
     last_checkpoint, max_seq_length = check_no_error(
         data_args, training_args, datasets, tokenizer
     )
+    
+    qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
+    qg_dataset = Dataset.from_pandas(qg_df)
+    qg_dataset.save_to_disk("../data/qg_dataset/")
     
     ES_retriever = SparseRetrieval()
     
@@ -252,7 +256,7 @@ def run_mrc(
     #negative sampling
     def prepare_train_features_ng(examples):
         x = Dataset.from_dict(examples)
-        negative_df = ES_retriever.retrieve_ES(x, topk = data_args.ng_top_k_retrieval, ner_path="/opt/ml/code/train_tagged.csv")
+        negative_df = ES_retriever.retrieve_ES(x, topk = data_args.ng_top_k_retrieval, ner_path="./train_tagged.csv")
         negative_query = negative_df['question']
         negative_contexts = negative_df['context']
         negative_gt_contexts = negative_df['original_context']
@@ -311,12 +315,12 @@ def run_mrc(
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-        # train_dataset_qg = load_from_disk('/opt/ml/data/qg_origin_dataset/')
-        # train_dataset_qg = train_dataset_qg.map(
+        # qg_dataset = load_from_disk("../data/qg_dataset/")
+        # train_dataset_qg = qg_dataset[1:500].map(
         #     prepare_train_features,
         #     batched=True,
         #     num_proc=data_args.preprocessing_num_workers,
-        #     remove_columns=train_dataset_qg.column_names,
+        #     remove_columns=qg_dataset.column_names,
         #     load_from_cache_file=not data_args.overwrite_cache,
         # )
         train_dataset = concatenate_datasets([
