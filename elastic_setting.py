@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")  # default: show warnings
 def set_index_and_server(args):
     # Connect to elasticsearch
     config = {"host": "localhost", "port": 9200}
-    es = Elasticsearch([config],timeout=30)
+    es = Elasticsearch([config], timeout=30)
     print("Ping Elasticsearch :", es.ping())
 
     # Make index
@@ -58,7 +58,7 @@ def insert_wiki_data(es, index_name):
 def preprocess(text):
     text = re.sub(r"\n", " ", text)
     text = re.sub(r"\\n", " ", text)
-    #text = re.sub(r"\'", "", text) -> 이거 풀면 성능 하락
+    # text = re.sub(r"\'", "", text) -> 이거 풀면 성능 하락
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"#", " ", text)
     text = re.sub(

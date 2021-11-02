@@ -9,42 +9,44 @@ import re
 
 
 # 172.17.0.2
-es_server = Popen(['/opt/ml/elasticsearch-7.15.1/bin/elasticsearch'], stdout=PIPE, stderr=STDOUT, preexec_fn=lambda:os.setuid(1))
+es_server = Popen(
+    ["../elasticsearch-7.15.1/bin/elasticsearch"],
+    stdout=PIPE,
+    stderr=STDOUT,
+    preexec_fn=lambda: os.setuid(1),
+)
 
 INDEX_NAME = "document"
 
 
 INDEX_SETTINGS = {
-  "settings" : {
-    "index":{
-      "analysis":{
-        "analyzer":{
-          "korean":{
-            "type":"custom",
-            "tokenizer":"nori_tokenizer",
-            "filter": [ "shingle" ],
-
-          }
+    "settings": {
+        "index": {
+            "analysis": {
+                "analyzer": {
+                    "korean": {
+                        "type": "custom",
+                        "tokenizer": "nori_tokenizer",
+                        "filter": ["shingle"],
+                    }
+                }
+            }
         }
-      }
-    }
-  },
-  "mappings": {
-
-      "properties" : {
-        "content" : {
-          "type" : "text",
-          "analyzer": "korean",
-          "search_analyzer": "korean"
-        },
-        "title" : {
-          "type" : "text",
-          "analyzer": "korean",
-          "search_analyzer": "korean"
+    },
+    "mappings": {
+        "properties": {
+            "content": {
+                "type": "text",
+                "analyzer": "korean",
+                "search_analyzer": "korean",
+            },
+            "title": {
+                "type": "text",
+                "analyzer": "korean",
+                "search_analyzer": "korean",
+            },
         }
-      }
-
-  }
+    },
 }
 try:
     es.transport.close()
