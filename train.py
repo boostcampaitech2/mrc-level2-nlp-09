@@ -155,9 +155,10 @@ def run_mrc(
         data_args, training_args, datasets, tokenizer
     )
     
-    # qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
-    # qg_dataset = Dataset.from_pandas(qg_df)
-    # qg_dataset.save_to_disk("../data/qg_dataset/")
+    qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
+    qg_df = qg_df.iloc[1:1200]
+    qg_dataset = Dataset.from_pandas(qg_df)
+    qg_dataset.save_to_disk("../data/qg_dataset/")
     
     ES_retriever = SparseRetrieval()
     
@@ -315,18 +316,18 @@ def run_mrc(
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-        # qg_dataset = load_from_disk("../data/qg_dataset/")
-        # train_dataset_qg = qg_dataset[1:500].map(
-        #     prepare_train_features,
-        #     batched=True,
-        #     num_proc=data_args.preprocessing_num_workers,
-        #     remove_columns=qg_dataset.column_names,
-        #     load_from_cache_file=not data_args.overwrite_cache,
-        # )
+        qg_dataset = load_from_disk("../data/qg_dataset/")
+        train_dataset_qg = qg_dataset.map(
+            prepare_train_features,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            remove_columns=qg_dataset.column_names,
+            load_from_cache_file=not data_args.overwrite_cache,
+        )
         train_dataset = concatenate_datasets([
             train_dataset_ps.flatten_indices(),
             train_dataset_ng.flatten_indices(),
-            # train_dataset_qg.flatten_indices(),
+            train_dataset_qg.flatten_indices(),
         ])
     print('train_dataset length : ',len(train_dataset))
 
