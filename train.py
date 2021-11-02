@@ -53,7 +53,7 @@ def main():
     
     training_args = TrainingArguments(
         do_train=True,
-        output_dir = './models/train_dataset_ngtopk3_pororo',
+        output_dir = './models/train_dataset_ngtopk5/',
         overwrite_output_dir=True,
         evaluation_strategy='steps',
         per_device_train_batch_size=16,
@@ -122,7 +122,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
-        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=3 + pororo')
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=5')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
@@ -155,9 +155,9 @@ def run_mrc(
         data_args, training_args, datasets, tokenizer
     )
     
-    qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
-    qg_dataset = Dataset.from_pandas(qg_df)
-    qg_dataset.save_to_disk("../data/qg_dataset/")
+    # qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
+    # qg_dataset = Dataset.from_pandas(qg_df)
+    # qg_dataset.save_to_disk("../data/qg_dataset/")
     
     ES_retriever = SparseRetrieval()
     
