@@ -77,10 +77,10 @@ def main():
     folds = [fold1, fold2, fold3, fold4, fold5]
 
     # range안의 숫자를 조절하여 특정 fold만 학습할 수 있습니다. fold로 들어갈 수 있는 숫자는 1~5입니다.(range(1,6))
-    for fold in range(3, 4):
+    for fold in range(1, 6):
         training_args = TrainingArguments(
             do_train=True,
-            output_dir="./models/train_dataset_ngqg_fold" + str(fold),
+            output_dir="./models/train_dataset_ng5_fold" + str(fold),
             overwrite_output_dir=True,
             evaluation_strategy="steps",
             per_device_train_batch_size=16,
@@ -102,8 +102,6 @@ def main():
         print(f"model is from {model_args.model_name_or_path}")
         print(f"data is from {data_args.dataset_name}")
 
-
-        
         # 모델을 초기화하기 전에 난수를 고정합니다.
         set_seed(training_args.seed)
 
@@ -134,23 +132,18 @@ def main():
                 "question": Value(dtype="string", id=None),
             }
         )
-        """
-        train_fold_dataset = Dataset.from_pandas(df, features=f)
-        train_fold_dataset.save_to_disk("./fold_train_dataset/")
-        validation_fold_dataset = Dataset.from_pandas(folds[fold - 1], features=f)
-        validation_fold_dataset.save_to_disk("./fold_valid_dataset/")
-        """
-        
         datasets = DatasetDict(
             {
-
                 "train": Dataset.from_pandas(df, features=f),
                 "validation": Dataset.from_pandas(folds[fold - 1], features=f),
             }
         )
-        
+
+        """
+        # datasets = load_from_disk(data_args.dataset_name)
         datasets.save_to_disk("./fold_dataset/")
         datasets = load_from_disk("./fold_dataset/")
+        """
         print(datasets)
 
         # AutoConfig를 이용하여 pretrained model 과 tokenizer를 불러옵니다.
@@ -188,7 +181,7 @@ def main():
                 project="mrc",
                 entity="quarter100",
                 name="fold" + str(fold),
-                group="ng5qg1200_fold",
+                group="ng5only_fold",
             )
             run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
             run.finish()
@@ -222,12 +215,12 @@ def run_mrc(
     last_checkpoint, max_seq_length = check_no_error(
         data_args, training_args, datasets, tokenizer
     )
-
+    """
     qg_df = pd.read_pickle("../data/delete_qg_sort.pkl")
     qg_df = qg_df.iloc[1:1200]
     qg_dataset = Dataset.from_pandas(qg_df)
     qg_dataset.save_to_disk("../data/qg_dataset/")
-
+    """
     ES_retriever = SparseRetrieval()
 
     # Train preprocessing / 전처리를 진행합니다.
@@ -393,6 +386,7 @@ def run_mrc(
             remove_columns=column_names,
             load_from_cache_file=data_args.overwrite_cache,
         )
+        """
         qg_dataset = load_from_disk("../data/qg_dataset/")
         train_dataset_qg = qg_dataset.map(
             prepare_train_features,
@@ -401,11 +395,12 @@ def run_mrc(
             remove_columns=qg_dataset.column_names,
             load_from_cache_file=data_args.overwrite_cache,
         )
+        """
         train_dataset = concatenate_datasets(
             [
                 train_dataset_ps.flatten_indices(),
                 train_dataset_ng.flatten_indices(),
-                train_dataset_qg.flatten_indices(),
+                #train_dataset_qg.flatten_indices(),
             ]
         )
     print("train_dataset length : ", len(train_dataset))
