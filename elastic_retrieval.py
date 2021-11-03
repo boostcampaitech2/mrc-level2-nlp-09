@@ -63,9 +63,11 @@ class SparseRetrieval:
         # print(self.es.get(index=self.index_name, id=1))
 
     def retrieve_ES(
-        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1, ner_path="/opt/ml/code/inference_tagged.csv"
+        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1, ner_path="/opt/ml/code/inference_tagged.csv", kss=False
     ) -> Union[Tuple[List, List], pd.DataFrame]:
-
+        if kss:
+            kss_df = pd.read_pickle('../data/top20_kss.pkl')
+            return kss_df
         # Retrieve한 Passage를 pd.DataFrame으로 반환합니다.
         total = []
         with timer("query exhaustive search"):

@@ -119,7 +119,7 @@ def run_sparse_retrieval(
     # Query에 맞는 Passage들을 Retrieval 합니다.
     retriever = SparseRetrieval()
     
-    df = retriever.retrieve_ES(datasets["validation"], topk=data_args.top_k_retrieval, ner_path="./inference_tagged.csv")
+    df = retriever.retrieve_ES(datasets["validation"], topk=data_args.top_k_retrieval, ner_path="./inference_tagged.csv", kss=False)
 
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if training_args.do_predict:

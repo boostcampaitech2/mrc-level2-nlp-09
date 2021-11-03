@@ -53,7 +53,7 @@ def main():
     
     training_args = TrainingArguments(
         do_train=True,
-        output_dir = './models/train_dataset_ngtopk5/',
+        output_dir = './models/train_dataset_ngtopk7/',
         overwrite_output_dir=True,
         evaluation_strategy='steps',
         per_device_train_batch_size=16,
@@ -122,7 +122,7 @@ def main():
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
-        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=5')
+        run=wandb.init(project='mrc', entity='quarter100', name='Reader negative sampling topk=7')
         run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
@@ -155,10 +155,10 @@ def run_mrc(
         data_args, training_args, datasets, tokenizer
     )
     
-    qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
-    qg_df = qg_df.iloc[1:1200]
-    qg_dataset = Dataset.from_pandas(qg_df)
-    qg_dataset.save_to_disk("../data/qg_dataset/")
+    # qg_df = pd.read_pickle('../data/delete_qg_sort.pkl')
+    # qg_df = qg_df.iloc[1:1200]
+    # qg_dataset = Dataset.from_pandas(qg_df)
+    # qg_dataset.save_to_disk("../data/qg_dataset/")
     
     ES_retriever = SparseRetrieval()
     
@@ -316,18 +316,18 @@ def run_mrc(
             remove_columns=column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
-        qg_dataset = load_from_disk("../data/qg_dataset/")
-        train_dataset_qg = qg_dataset.map(
-            prepare_train_features,
-            batched=True,
-            num_proc=data_args.preprocessing_num_workers,
-            remove_columns=qg_dataset.column_names,
-            load_from_cache_file=not data_args.overwrite_cache,
-        )
+        # qg_dataset = load_from_disk("../data/qg_dataset/")
+        # train_dataset_qg = qg_dataset.map(
+        #     prepare_train_features,
+        #     batched=True,
+        #     num_proc=data_args.preprocessing_num_workers,
+        #     remove_columns=qg_dataset.column_names,
+        #     load_from_cache_file=not data_args.overwrite_cache,
+        # )
         train_dataset = concatenate_datasets([
             train_dataset_ps.flatten_indices(),
             train_dataset_ng.flatten_indices(),
-            train_dataset_qg.flatten_indices(),
+            # train_dataset_qg.flatten_indices(),
         ])
     print('train_dataset length : ',len(train_dataset))
 
