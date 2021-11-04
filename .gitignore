@@ -1,6 +1,6 @@
 __pycache__/
 .ipynb_checkpoints/
 wandb/
-*.ipynb
+#*.ipynb
 models/
 outputs/
