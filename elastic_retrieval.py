@@ -74,7 +74,9 @@ class SparseRetrieval:
         topk: Optional[int] = 1,
         ner_path="./inference_tagged.csv",
     ) -> Union[Tuple[List, List], pd.DataFrame]:
-
+        if kss:
+            kss_df = pd.read_pickle('../data/top20_kss.pkl')
+            return kss_df
         # Retrieve한 Passage를 pd.DataFrame으로 반환합니다.
         total = []
         with timer("query exhaustive search"):
