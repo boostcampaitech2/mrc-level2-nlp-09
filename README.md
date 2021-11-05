@@ -10,7 +10,7 @@
 ## Our solutions
 - Retreiver
   - Elastic search
-- Reader
+  - Pororo NER
 - Augmentation
   - Negative Sampling
   - Question Generation
