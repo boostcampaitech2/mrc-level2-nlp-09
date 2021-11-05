@@ -64,6 +64,6 @@ for i, batch in tqdm(enumerate(dataloader), desc="generate", total=len(dataloade
             (i, examples[i].answer, examples[i].question, decoded_question_text, d_id[i])
         )
 
-with open('remove_question_generation_id.tsv', "w") as f:
+with open('question_generation_id.tsv', "w") as f:
     for context, answer, question, generated_question,d_id in generated_results:
         f.write(f"{generated_question}\t{answer}\t{d_id}\n")

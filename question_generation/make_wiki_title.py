@@ -1,7 +1,6 @@
 import pandas as pd
 
-
-wiki_df = pd.read_json('/opt/ml/data/wikipedia_documents.json',orient='index')
+wiki_df = pd.read_json('/opt/ml/data/merge_wiki.json',orient='index')
 
 texts = []
 titles = []
@@ -20,4 +19,4 @@ for i in range(len(wiki_df)):
 wiki_qa_df = pd.DataFrame(data={'text':texts,'title':titles,'document_id':documents_id})
 wiki_qa_df.head()
 
-wiki_qa_df.to_csv('wiki_text_title.csv')
+wiki_qa_df.to_csv('merge_wiki_text_title.csv')
