@@ -1,16 +1,16 @@
 ## Training  
 1. feat/exp/kfold pull 받기  
-2. 받은거 베이스라인 코드 디렉 안에다가 복사(기존에 코드안에 있던 모든 파일들 디렉제외 다른곳에 이동시키기)  
-3. elastic_setting.py 돌리기 (../data/wikipedia_documents.json) 이 형식 맞춰놓기  
-4. elastic_retriever.py 돌릴필요는 없는데 안에 파일 경로 확인 필수!!  
+2. make_ner_tag.py 돌려서 train_tagged.csv, inference_tagged.csv 생성
+3. make_folds.py 돌려서 fold1.csv ~  fold5.csv 생성
+4. elastic_setting.py 돌리기 (../data/wikipedia_documents.json) 이 형식 맞춰놓기  
+5. elastic_retriever.py 돌릴필요는 없는데 안에 파일 경로 확인 필수!!  
 	inference_tagged.csv (code 디렉 안에)  
 	train_tagged.csv (code 디렉 안에)  
-5. trian.py 돌리면 되는데 있어야 되는 파일들  
+6. trian.py 돌리면 되는데 있어야 되는 파일들  
 	qg_dataset 디렉 만들기 (data디렉안에 만들기)  
 	fold1.csv ~  fold5.csv (code 디렉 안에)  
 	delete_qg_sort.pkl (data 디렉 안에)  
-	train_tagged.csv (code 디렉 안에)  
-6. range 확인  
+	train_tagged.csv (code 디렉 안에) 
 
 
 ## Inference
