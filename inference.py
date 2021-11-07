@@ -117,9 +117,9 @@ def run_sparse_retrieval(
 ) -> DatasetDict:
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
-    retriever = SparseRetrieval()
+    retrieval = SparseRetrieval()
 
-    df = retriever.retrieve_ES(
+    df = retrieval.retrieve_ES(
         datasets["validation"],
         topk=data_args.top_k_retrieval,
         ner_path="./inference_tagged.csv",

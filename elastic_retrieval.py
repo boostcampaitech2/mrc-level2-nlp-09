@@ -174,23 +174,23 @@ if __name__ == "__main__":
     print("*" * 40, "query dataset", "*" * 40)
     print(full_ds)
 
-    retriever = SparseRetrieval()
+    retrieval = SparseRetrieval()
 
     def topk_experiment(topK_list):
         result_dict = {}
-        # retriever.get_sparse_embedding()
+        # retrieval.get_sparse_embedding()
         for topK in tqdm(topK_list):
-            result_retriever = retriever.retrieve_ES(
+            result_retrieval = retrieval.retrieve_ES(
                 full_ds, topk=topK, ner_path="./train_tagged.csv"
             )
             correct = 0
-            for index in range(len(result_retriever)):
+            for index in range(len(result_retrieval)):
                 if (
-                    result_retriever["original_context"][index]
-                    in result_retriever["context"][index]
+                    result_retrieval["original_context"][index]
+                    in result_retrieval["context"][index]
                 ):
                     correct += 1
-            result_dict[topK] = correct / len(result_retriever)
+            result_dict[topK] = correct / len(result_retrieval)
         return result_dict
 
     topK_list = [1, 5, 10, 15]

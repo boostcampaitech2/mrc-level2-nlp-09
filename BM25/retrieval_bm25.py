@@ -344,19 +344,19 @@ if __name__ == "__main__":
         use_fast=False,
     )
 
-    retriever = SparseRetrieval(
+    retrieval = SparseRetrieval(
         tokenize_fn=tokenizer.tokenize,
         data_path=args.data_path,
         context_path=args.context_path,
     )
     
-    retriever.get_sparse_embedding()
+    retrieval.get_sparse_embedding()
 
     topK_list = [1,10,20,50]
     result_dict = {}
     
     for topK in tqdm(topK_list):
-        result_retriever = retriever.retrieve(full_ds, topk=topK)
-        result = topk_experiment(result_retriever)
+        result_retrieval = retrieval.retrieve(full_ds, topk=topK)
+        result = topk_experiment(result_retrieval)
         result_dict[topK]=result
     print(result_dict)

@@ -221,7 +221,7 @@ def run_mrc(
     qg_dataset = Dataset.from_pandas(qg_df)
     qg_dataset.save_to_disk("../data/qg_dataset/")
     """
-    ES_retriever = SparseRetrieval()
+    ES_retrieval = SparseRetrieval()
 
     # Train preprocessing / 전처리를 진행합니다.
     def prepare_train_features(examples):
@@ -321,7 +321,7 @@ def run_mrc(
     # negative sampling
     def prepare_train_features_ng(examples):
         x = Dataset.from_dict(examples)
-        negative_df = ES_retriever.retrieve_ES(
+        negative_df = ES_retrieval.retrieve_ES(
             x, topk=data_args.ng_top_k_retrieval, ner_path="./train_tagged.csv"
         )
         negative_query = negative_df["question"]
