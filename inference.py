@@ -118,14 +118,18 @@ def run_sparse_retrieval(
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
     retriever = SparseRetrieval()
-    
-    df = retriever.retrieve_ES(datasets["validation"], topk=data_args.top_k_retrieval, ner_path="./inference_tagged.csv", kss=False)
+
+    df = retriever.retrieve_ES(
+        datasets["validation"],
+        topk=data_args.top_k_retrieval,
+        ner_path="./inference_tagged.csv",
+    )
 
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if training_args.do_predict:
         f = Features(
             {
-                "context": Sequence(feature = Value(dtype="string", id=None)), #바꿈!
+                "context": Sequence(feature=Value(dtype="string", id=None)),  # 바꿈!
                 "id": Value(dtype="string", id=None),
                 "question": Value(dtype="string", id=None),
             }
@@ -143,7 +147,7 @@ def run_sparse_retrieval(
                     length=-1,
                     id=None,
                 ),
-                "context": Sequence(feature = Value(dtype="string", id=None)), #바꿈!
+                "context": Sequence(feature=Value(dtype="string", id=None)),  # 바꿈!
                 "id": Value(dtype="string", id=None),
                 "question": Value(dtype="string", id=None),
             }
@@ -176,13 +180,13 @@ def run_mrc(
     last_checkpoint, max_seq_length = check_no_error(
         data_args, training_args, datasets, tokenizer
     )
-    #싹 바꿈!
+    # 싹 바꿈!
     def prepare_validation_features(examples):
-        test_query = examples['question']
-        test_contexts = examples['context']
-        test_id = examples['id']
+        test_query = examples["question"]
+        test_contexts = examples["context"]
+        test_id = examples["id"]
         topk = len(test_contexts[0])
-        assert (topk == data_args.top_k_retrieval), 'topk not correct'
+        assert topk == data_args.top_k_retrieval, "topk not correct"
         tq_final = []
         tc_final = []
         ti_final = []
@@ -192,7 +196,9 @@ def run_mrc(
             tq_final.extend(temp_q)
             ti_final.extend(temp_i)
             tc_final.extend(test_contexts[i])
-        assert (len(tq_final)==len(ti_final) and len(tq_final)==len(tc_final)), 'final list length not correct'
+        assert len(tq_final) == len(ti_final) and len(tq_final) == len(
+            tc_final
+        ), "final list length not correct"
         tokenized_examples = tokenizer(
             tq_final if pad_on_right else tc_final,
             tc_final if pad_on_right else tq_final,
@@ -201,7 +207,7 @@ def run_mrc(
             stride=data_args.doc_stride,
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
-            return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+            return_token_type_ids=False,  # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
             padding="max_length" if data_args.pad_to_max_length else False,
         )
         sample_mapping = tokenized_examples["overflow_to_sample_mapping"]
@@ -211,13 +217,13 @@ def run_mrc(
             context_index = 1 if pad_on_right else 0
             sample_index = sample_mapping[i]
             tokenized_examples["example_id"].append(ti_final[sample_index])
-            
+
             tokenized_examples["offset_mapping"][i] = [
                 (o if sequence_ids[k] == context_index else None)
                 for k, o in enumerate(tokenized_examples["offset_mapping"][i])
             ]
         return tokenized_examples
-    
+
     eval_dataset = datasets["validation"]
 
     # Validation Feature 생성
@@ -249,7 +255,7 @@ def run_mrc(
             examples=examples,
             features=features,
             predictions=predictions,
-            topk = data_args.top_k_retrieval,
+            topk=data_args.top_k_retrieval,
             max_answer_length=data_args.max_answer_length,
             output_dir=training_args.output_dir,
         )

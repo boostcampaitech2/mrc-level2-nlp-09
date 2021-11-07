@@ -2,10 +2,6 @@
     "settings": {
         "analysis": {
             "filter": {
-                "my_stop_filter": {
-                    "type": "stop",
-                    "stopwords_path": "user_dic/my_stop_dict.txt"
-                },
                 "my_shingle":{
                     "type":"shingle"
                 },

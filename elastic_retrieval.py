@@ -15,7 +15,9 @@ from datasets import (
 
 from elasticsearch import Elasticsearch
 from elastic_setting import preprocess
-#from pororo import Pororo
+
+# from pororo import Pororo
+
 
 @contextmanager
 def timer(name):
@@ -35,19 +37,23 @@ def elastic_setting(index_name="origin-wiki-index"):
 def search_es(es, index_name, question_text, topk, tagged):
     # index: index to search, body: query to search
     query = {
-            "query": {
-                "bool": {
-                    "must":[
-                        {"match": {"document_text": question_text}}
-                    ],
-                    "should":[
-                        {"match": {"document_text": ' '.join([i[0] for i in tagged if i[1]!='O'])}}
-                    ],
-                }
+        "query": {
+            "bool": {
+                "must": [{"match": {"document_text": question_text}}],
+                "should": [
+                    {
+                        "match": {
+                            "document_text": " ".join(
+                                [i[0] for i in tagged if i[1] != "O"]
+                            )
+                        }
+                    }
+                ],
             }
         }
-    
-    #query = {"query": {"match": {"document_text": question_text}}}
+    }
+
+    # query = {"query": {"match": {"document_text": question_text}}}
     res = es.search(index=index_name, body=query, size=topk)  # size: default 10, top k
 
     return res
@@ -63,7 +69,10 @@ class SparseRetrieval:
         # print(self.es.get(index=self.index_name, id=1))
 
     def retrieve_ES(
-        self, query_or_dataset: Union[str, Dataset], topk: Optional[int] = 1, ner_path="/opt/ml/code/inference_tagged.csv", kss=False
+        self,
+        query_or_dataset: Union[str, Dataset],
+        topk: Optional[int] = 1,
+        ner_path="./inference_tagged.csv",
     ) -> Union[Tuple[List, List], pd.DataFrame]:
         if kss:
             kss_df = pd.read_pickle('../data/top20_kss.pkl')
@@ -72,7 +81,9 @@ class SparseRetrieval:
         total = []
         with timer("query exhaustive search"):
             doc_scores, doc_indices, doc = self.get_relevant_doc_bulk_ES(
-                query_or_dataset["question"], topk=topk, ner_path=ner_path,
+                query_or_dataset["question"],
+                topk=topk,
+                ner_path=ner_path,
             )
         for idx, example in enumerate(tqdm(query_or_dataset, desc="ES retrieval: ")):
             # topK_context = ""
@@ -92,16 +103,19 @@ class SparseRetrieval:
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환합니다.
                 # og_context도 전처리하고 그에 따른 answer 위치 이동 반영
-                answer_start = example['answers']['answer_start'][0]
-                answer_end = answer_start + len(example['answers']['text'][0])
-                answer_text = example['answers']['text'][0]
-                context_pre = example['context'][:answer_start]
-                context_post = example['context'][answer_end:]
+                answer_start = example["answers"]["answer_start"][0]
+                answer_end = answer_start + len(example["answers"]["text"][0])
+                answer_text = example["answers"]["text"][0]
+                context_pre = example["context"][:answer_start]
+                context_post = example["context"][answer_end:]
                 context_pre = preprocess(context_pre)
                 context_post = preprocess(context_post)
                 new_answer_start = len(context_pre)
                 tmp["original_context"] = context_pre + answer_text + context_post
-                tmp["answers"] = {'answer_start': [new_answer_start], 'text': [answer_text]}
+                tmp["answers"] = {
+                    "answer_start": [new_answer_start],
+                    "text": [answer_text],
+                }
             total.append(tmp)
 
         cqas = pd.DataFrame(total)
@@ -116,9 +130,13 @@ class SparseRetrieval:
         doc_indices = []
 
         df = pd.read_csv(ner_path)
-        df['pororo_ner'] = df['pororo_ner'].apply(eval)
+        df["pororo_ner"] = df["pororo_ner"].apply(eval)
 
-        for question, tagged in tqdm(zip(queries, df['pororo_ner']), desc="get_relevant_doc_bulk_ES: "):
+        for question, tagged in tqdm(
+            zip(queries, df["pororo_ner"]),
+            total=len(queries),
+            desc="get_relevant_doc_bulk_ES: ",
+        ):
 
             documents = search_es(self.es, self.index_name, question, topk, tagged)
             doc.append(documents["hits"]["hits"])
@@ -162,7 +180,9 @@ if __name__ == "__main__":
         result_dict = {}
         # retriever.get_sparse_embedding()
         for topK in tqdm(topK_list):
-            result_retriever = retriever.retrieve_ES(full_ds, topk=topK, ner_path="/opt/ml/code/train_tagged.csv")
+            result_retriever = retriever.retrieve_ES(
+                full_ds, topk=topK, ner_path="./train_tagged.csv"
+            )
             correct = 0
             for index in range(len(result_retriever)):
                 if (
