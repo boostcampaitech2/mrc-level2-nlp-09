@@ -86,7 +86,7 @@ run = wandb.init(project= 'klue', entity= 'quarter100', name= f'Any training nam
 python train.py
 ```
 
-Models are saved in "./models/train*dataset*{experiment_name}/".
+Models are saved in "./models/train_dataset\_{experiment_name}/".
 
 ## Inference
 
