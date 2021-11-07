@@ -7,8 +7,6 @@
 🤓 Leaderboard에서 Public 240개, Private 360개로 평가가 이루어짐.  
 🤓 하루 10회로 모델 제출 제한
 
-## [Team Portfolio]()
-
 ## [Competition Report(PDF)](competition_results/nlp-p-p09_mrc.pdf)
 
 ## Our solutions
@@ -86,7 +84,7 @@ run = wandb.init(project= 'klue', entity= 'quarter100', name= f'Any training nam
 python train.py
 ```
 
-Models are saved in "./models/train*dataset*{experiment_name}/".
+Models are saved in "./models/train_dataset\_{experiment_name}/".
 
 ## Inference
 
