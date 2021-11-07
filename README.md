@@ -5,8 +5,8 @@
 🤓 Leaderboard에서 Public 240개, Private 360개로 평가가 이루어짐.  
 🤓 하루 10회로 모델 제출 제한
 
-## [Team Portfolio](competition_results/nlp-p-p09_mrc.pdf)
-## [Competition Report(PDF)](/)
+## [Team Portfolio]()
+## [Competition Report(PDF)](competition_results/nlp-p-p09_mrc.pdf)
 ## Our solutions
 - Retreiver
   - Elastic search
@@ -27,11 +27,6 @@
 <img src="competition_results/capture.png" width="80%">
 
 --- 
-## Docs 
-- [BM25](BM25/README.md)
-- [Question Generation](question_generation/README.md)
-
-
 ## Installation
 
 - python module: requirements.txt
@@ -85,6 +80,9 @@ Prediction csv files are saved in "./outputs/test_dataset/".
 ## Ensemble
 - Hard voting
 - Ensemble result is saved in "./submission_fold_total.csv".
+
+## Docs 
+- [Question Generation](question_generation/README.md)
 
 ## Members
 
