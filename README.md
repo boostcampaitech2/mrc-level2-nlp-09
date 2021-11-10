@@ -7,7 +7,7 @@
 🤓 Leaderboard에서 Public 240개, Private 360개로 평가가 이루어짐.  
 🤓 하루 10회로 모델 제출 제한
 
-## [Team Portfolio]()
+## [Team Portfolio](https://naem1023.notion.site/ODQA-4be47dae144f479fb70431181cdd1cbc)
 
 ## [Competition Report(PDF)](competition_results/nlp-p-p09_mrc.pdf)
 
