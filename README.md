@@ -9,7 +9,9 @@
 
 ## [Team Portfolio](https://naem1023.notion.site/ODQA-4be47dae144f479fb70431181cdd1cbc)
 
-## [Competition Report(PDF)](competition_results/nlp-p-p09_mrc.pdf)
+## [Solution Presentation(PDF)](competition_results/ODQA_2등_솔루션(9조)발표자료.pdf)
+
+## [Competition Report(PDF)](competition_results/Competition%20Report.pdf)
 
 ## Our solutions
 
